@@ -18,13 +18,16 @@
 
     <script>
     // 4x8x8
-    var shapes = new Array(4);
-    var shapeColours = ["red", "blue", "green", "black"]
+    var nbShapes = 5;
+    var shapeDim = 8;
+    var packingDim = [20,40];
+    var shapeColours = ["red", "blue", "green", "black", "orange"];
+    var shapes = new Array(nbShapes);
 
     function renderShapes() {
-        for (sh = 1; sh <= 4; sh++) {
-            for (i = 1; i <= 8; i++) {
-                for (j = 1; j <= 8; j++) {
+        for (sh = 1; sh <= nbShapes; sh++) {
+            for (i = 1; i <= shapeDim; i++) {
+                for (j = 1; j <= shapeDim; j++) {
                     if (shapes[sh-1][i-1][j-1]) {
                         $("#shapes_"+sh+"_"+i+"_"+j).css("background-color", shapeColours[sh-1]);
                     } else {
@@ -55,13 +58,33 @@
 
     $(document).ready(function(){
 
-        // generating dom for the packing
+        // generating DOM for the shapes
+        for (sh = 1; sh <= nbShapes; sh++) {
+            shapestable = document.createElement('table');
+            shapestable_body = document.createElement('tbody');
+            shapestable.className += "table-bordered";
+            for (i = 1; i <= shapeDim; i++) {
+                tr = document.createElement('tr');
+                for (j = 1; j <= shapeDim; j++) {
+                    td = document.createElement('td');
+                    td.id = "shapes_" + sh + "_" + i + "_" + j;
+                    tr.appendChild(td);
+                }
+                shapestable_body.appendChild(tr);
+            }
+            shapestable.appendChild(shapestable_body);
+            center = document.createElement('center');
+            center.appendChild(shapestable);
+            document.getElementById("shapes_" + sh + "_holder").appendChild(center);
+        }
+
+        // generating DOM for the packing
         packingtable = document.createElement('table');
         packingtable_body = document.createElement('tbody');
         packingtable.className += "table-bordered";
-        for (i = 1; i <= 20; i++) {
+        for (i = 1; i <= packingDim[0]; i++) {
             tr = document.createElement('tr');
-            for (j = 1; j <= 80; j++) {
+            for (j = 1; j <= packingDim[1]; j++) {
                 td = document.createElement('td');
                 td.id = "packing_" + i + "_" + j;
                 tr.appendChild(td);
@@ -69,31 +92,15 @@
             packingtable_body.appendChild(tr);
         }
         packingtable.appendChild(packingtable_body);
-        document.getElementById("packing_holder").appendChild(packingtable);
+        center = document.createElement('center');
+        center.appendChild(packingtable);
+        document.getElementById("packing_holder").appendChild(center);
 
-        // generating dom for the packing
-        for (i = 1; i <= 20; i++) {
-            shapestable = document.createElement('table');
-            shapestable_body = document.createElement('tbody');
-            shapestable.className += "table-bordered";
-            for (i = 1; i <= 8; i++) {
-                tr = document.createElement('tr');
-                for (j = 1; j <= 8; j++) {
-                    td = document.createElement('td');
-                    td.id = "shapes_" + sh + i + "_" + j;
-                    tr.appendChild(td);
-                }
-                shapestable_body.appendChild(tr);
-            }
-            shapestable.appendChild(shapestable_body);
-            document.getElementById("shapes_" + sh + "_holder").appendChild(shapestable);
-        }
-
-        for (sh = 1; sh <= 4; sh++) {
-            shapes[sh-1] = new Array(8);
-            for (i = 1; i <= 8; i++) {
-                shapes[sh-1][i-1] = new Array(8);
-                for (j = 1; j <= 8; j++) {
+        for (sh = 1; sh <= nbShapes; sh++) {
+            shapes[sh-1] = new Array(shapeDim);
+            for (i = 1; i <= shapeDim; i++) {
+                shapes[sh-1][i-1] = new Array(shapeDim);
+                for (j = 1; j <= shapeDim; j++) {
                     shapes[sh-1][i-1][j-1] = false;
                     $("#shapes_"+sh+"_"+i+"_"+j).on("mouseover mousedown contextmenu"
                                                    , generate_handler(sh,i,j)
@@ -111,300 +118,55 @@
     <div class="container-fluid">
         <div class="row">
             <div class="col-xs-12">
-                <h1>2D Packing with Constraint Programming</h1>
+                <center>
+                    <h1>2D Packing with Constraint Programming</h1>
+                </center>
             </div>
         </div>
         <div id="shapes" class="row">
-            <div id="shapes_1" class="col-xs-3 panel panel-default panel-red">
+            <div class="col-xs-1"></div>
+            <div id="shapes_1" class="col-xs-2 panel panel-default panel-red">
                 <div class="panel-heading">
                     <h3 class="panel-title">The Red Shape</h3>
                 </div>
-                <div id="shapes_1_holder" class="panel-body">
-                </div>
+                <div id="shapes_1_holder" class="panel-body"> </div>
             </div>
-            <div id="shapes_2" class="col-xs-3 panel panel-default panel-blue">
+            <div id="shapes_2" class="col-xs-2 panel panel-default panel-blue">
                 <div class="panel-heading">
                     <h3 class="panel-title">The Blue Shape</h3>
                 </div>
-                
-                <div class="panel-body">
-                    <center>
-                    <table class="table-bordered">
-                        <tr>
-                            <td id="shapes_2_1_1"></td>
-                            <td id="shapes_2_1_2"></td>
-                            <td id="shapes_2_1_3"></td>
-                            <td id="shapes_2_1_4"></td>
-                            <td id="shapes_2_1_5"></td>
-                            <td id="shapes_2_1_6"></td>
-                            <td id="shapes_2_1_7"></td>
-                            <td id="shapes_2_1_8"></td>
-                        </tr>
-                        <tr>
-                            <td id="shapes_2_2_1"></td>
-                            <td id="shapes_2_2_2"></td>
-                            <td id="shapes_2_2_3"></td>
-                            <td id="shapes_2_2_4"></td>
-                            <td id="shapes_2_2_5"></td>
-                            <td id="shapes_2_2_6"></td>
-                            <td id="shapes_2_2_7"></td>
-                            <td id="shapes_2_2_8"></td>
-                        </tr>
-                        <tr>
-                            <td id="shapes_2_3_1"></td>
-                            <td id="shapes_2_3_2"></td>
-                            <td id="shapes_2_3_3"></td>
-                            <td id="shapes_2_3_4"></td>
-                            <td id="shapes_2_3_5"></td>
-                            <td id="shapes_2_3_6"></td>
-                            <td id="shapes_2_3_7"></td>
-                            <td id="shapes_2_3_8"></td>
-                        </tr>
-                        <tr>
-                            <td id="shapes_2_4_1"></td>
-                            <td id="shapes_2_4_2"></td>
-                            <td id="shapes_2_4_3"></td>
-                            <td id="shapes_2_4_4"></td>
-                            <td id="shapes_2_4_5"></td>
-                            <td id="shapes_2_4_6"></td>
-                            <td id="shapes_2_4_7"></td>
-                            <td id="shapes_2_4_8"></td>
-                        </tr>
-                        <tr>
-                            <td id="shapes_2_5_1"></td>
-                            <td id="shapes_2_5_2"></td>
-                            <td id="shapes_2_5_3"></td>
-                            <td id="shapes_2_5_4"></td>
-                            <td id="shapes_2_5_5"></td>
-                            <td id="shapes_2_5_6"></td>
-                            <td id="shapes_2_5_7"></td>
-                            <td id="shapes_2_5_8"></td>
-                        </tr>
-                        <tr>
-                            <td id="shapes_2_6_1"></td>
-                            <td id="shapes_2_6_2"></td>
-                            <td id="shapes_2_6_3"></td>
-                            <td id="shapes_2_6_4"></td>
-                            <td id="shapes_2_6_5"></td>
-                            <td id="shapes_2_6_6"></td>
-                            <td id="shapes_2_6_7"></td>
-                            <td id="shapes_2_6_8"></td>
-                        </tr>
-                        <tr>
-                            <td id="shapes_2_7_1"></td>
-                            <td id="shapes_2_7_2"></td>
-                            <td id="shapes_2_7_3"></td>
-                            <td id="shapes_2_7_4"></td>
-                            <td id="shapes_2_7_5"></td>
-                            <td id="shapes_2_7_6"></td>
-                            <td id="shapes_2_7_7"></td>
-                            <td id="shapes_2_7_8"></td>
-                        </tr>
-                        <tr>
-                            <td id="shapes_2_8_1"></td>
-                            <td id="shapes_2_8_2"></td>
-                            <td id="shapes_2_8_3"></td>
-                            <td id="shapes_2_8_4"></td>
-                            <td id="shapes_2_8_5"></td>
-                            <td id="shapes_2_8_6"></td>
-                            <td id="shapes_2_8_7"></td>
-                            <td id="shapes_2_8_8"></td>
-                        </tr>
-                    </table>
-                    </center>
-                </div>
+                <div id="shapes_2_holder" class="panel-body"> </div>
             </div>
-            <div id="shapes_3" class="col-xs-3 panel panel-default panel-green">
+            <div id="shapes_3" class="col-xs-2 panel panel-default panel-green">
                 <div class="panel-heading">
                     <h3 class="panel-title">The Green Shape</h3>
                 </div>
-                <div class="panel-body">
-                    <center>
-                    <table class="table-bordered">
-                        <tr>
-                            <td id="shapes_3_1_1"></td>
-                            <td id="shapes_3_1_2"></td>
-                            <td id="shapes_3_1_3"></td>
-                            <td id="shapes_3_1_4"></td>
-                            <td id="shapes_3_1_5"></td>
-                            <td id="shapes_3_1_6"></td>
-                            <td id="shapes_3_1_7"></td>
-                            <td id="shapes_3_1_8"></td>
-                        </tr>
-                        <tr>
-                            <td id="shapes_3_2_1"></td>
-                            <td id="shapes_3_2_2"></td>
-                            <td id="shapes_3_2_3"></td>
-                            <td id="shapes_3_2_4"></td>
-                            <td id="shapes_3_2_5"></td>
-                            <td id="shapes_3_2_6"></td>
-                            <td id="shapes_3_2_7"></td>
-                            <td id="shapes_3_2_8"></td>
-                        </tr>
-                        <tr>
-                            <td id="shapes_3_3_1"></td>
-                            <td id="shapes_3_3_2"></td>
-                            <td id="shapes_3_3_3"></td>
-                            <td id="shapes_3_3_4"></td>
-                            <td id="shapes_3_3_5"></td>
-                            <td id="shapes_3_3_6"></td>
-                            <td id="shapes_3_3_7"></td>
-                            <td id="shapes_3_3_8"></td>
-                        </tr>
-                        <tr>
-                            <td id="shapes_3_4_1"></td>
-                            <td id="shapes_3_4_2"></td>
-                            <td id="shapes_3_4_3"></td>
-                            <td id="shapes_3_4_4"></td>
-                            <td id="shapes_3_4_5"></td>
-                            <td id="shapes_3_4_6"></td>
-                            <td id="shapes_3_4_7"></td>
-                            <td id="shapes_3_4_8"></td>
-                        </tr>
-                        <tr>
-                            <td id="shapes_3_5_1"></td>
-                            <td id="shapes_3_5_2"></td>
-                            <td id="shapes_3_5_3"></td>
-                            <td id="shapes_3_5_4"></td>
-                            <td id="shapes_3_5_5"></td>
-                            <td id="shapes_3_5_6"></td>
-                            <td id="shapes_3_5_7"></td>
-                            <td id="shapes_3_5_8"></td>
-                        </tr>
-                        <tr>
-                            <td id="shapes_3_6_1"></td>
-                            <td id="shapes_3_6_2"></td>
-                            <td id="shapes_3_6_3"></td>
-                            <td id="shapes_3_6_4"></td>
-                            <td id="shapes_3_6_5"></td>
-                            <td id="shapes_3_6_6"></td>
-                            <td id="shapes_3_6_7"></td>
-                            <td id="shapes_3_6_8"></td>
-                        </tr>
-                        <tr>
-                            <td id="shapes_3_7_1"></td>
-                            <td id="shapes_3_7_2"></td>
-                            <td id="shapes_3_7_3"></td>
-                            <td id="shapes_3_7_4"></td>
-                            <td id="shapes_3_7_5"></td>
-                            <td id="shapes_3_7_6"></td>
-                            <td id="shapes_3_7_7"></td>
-                            <td id="shapes_3_7_8"></td>
-                        </tr>
-                        <tr>
-                            <td id="shapes_3_8_1"></td>
-                            <td id="shapes_3_8_2"></td>
-                            <td id="shapes_3_8_3"></td>
-                            <td id="shapes_3_8_4"></td>
-                            <td id="shapes_3_8_5"></td>
-                            <td id="shapes_3_8_6"></td>
-                            <td id="shapes_3_8_7"></td>
-                            <td id="shapes_3_8_8"></td>
-                        </tr>
-                    </table>
-                    <center>
-                </div>
+                <div id="shapes_3_holder" class="panel-body"> </div>
             </div>
-            <div id="shapes_4" class="col-xs-3 panel panel-default panel-black">
+            <div id="shapes_4" class="col-xs-2 panel panel-default panel-black">
                 <div class="panel-heading">
                     <h3 class="panel-title">The Black Shape</h3>
                 </div>
-                <div class="panel-body">
-                    <center>
-                    <table class="table-bordered">
-                        <tr>
-                            <td id="shapes_4_1_1"></td>
-                            <td id="shapes_4_1_2"></td>
-                            <td id="shapes_4_1_3"></td>
-                            <td id="shapes_4_1_4"></td>
-                            <td id="shapes_4_1_5"></td>
-                            <td id="shapes_4_1_6"></td>
-                            <td id="shapes_4_1_7"></td>
-                            <td id="shapes_4_1_8"></td>
-                        </tr>
-                        <tr>
-                            <td id="shapes_4_2_1"></td>
-                            <td id="shapes_4_2_2"></td>
-                            <td id="shapes_4_2_3"></td>
-                            <td id="shapes_4_2_4"></td>
-                            <td id="shapes_4_2_5"></td>
-                            <td id="shapes_4_2_6"></td>
-                            <td id="shapes_4_2_7"></td>
-                            <td id="shapes_4_2_8"></td>
-                        </tr>
-                        <tr>
-                            <td id="shapes_4_3_1"></td>
-                            <td id="shapes_4_3_2"></td>
-                            <td id="shapes_4_3_3"></td>
-                            <td id="shapes_4_3_4"></td>
-                            <td id="shapes_4_3_5"></td>
-                            <td id="shapes_4_3_6"></td>
-                            <td id="shapes_4_3_7"></td>
-                            <td id="shapes_4_3_8"></td>
-                        </tr>
-                        <tr>
-                            <td id="shapes_4_4_1"></td>
-                            <td id="shapes_4_4_2"></td>
-                            <td id="shapes_4_4_3"></td>
-                            <td id="shapes_4_4_4"></td>
-                            <td id="shapes_4_4_5"></td>
-                            <td id="shapes_4_4_6"></td>
-                            <td id="shapes_4_4_7"></td>
-                            <td id="shapes_4_4_8"></td>
-                        </tr>
-                        <tr>
-                            <td id="shapes_4_5_1"></td>
-                            <td id="shapes_4_5_2"></td>
-                            <td id="shapes_4_5_3"></td>
-                            <td id="shapes_4_5_4"></td>
-                            <td id="shapes_4_5_5"></td>
-                            <td id="shapes_4_5_6"></td>
-                            <td id="shapes_4_5_7"></td>
-                            <td id="shapes_4_5_8"></td>
-                        </tr>
-                        <tr>
-                            <td id="shapes_4_6_1"></td>
-                            <td id="shapes_4_6_2"></td>
-                            <td id="shapes_4_6_3"></td>
-                            <td id="shapes_4_6_4"></td>
-                            <td id="shapes_4_6_5"></td>
-                            <td id="shapes_4_6_6"></td>
-                            <td id="shapes_4_6_7"></td>
-                            <td id="shapes_4_6_8"></td>
-                        </tr>
-                        <tr>
-                            <td id="shapes_4_7_1"></td>
-                            <td id="shapes_4_7_2"></td>
-                            <td id="shapes_4_7_3"></td>
-                            <td id="shapes_4_7_4"></td>
-                            <td id="shapes_4_7_5"></td>
-                            <td id="shapes_4_7_6"></td>
-                            <td id="shapes_4_7_7"></td>
-                            <td id="shapes_4_7_8"></td>
-                        </tr>
-                        <tr>
-                            <td id="shapes_4_8_1"></td>
-                            <td id="shapes_4_8_2"></td>
-                            <td id="shapes_4_8_3"></td>
-                            <td id="shapes_4_8_4"></td>
-                            <td id="shapes_4_8_5"></td>
-                            <td id="shapes_4_8_6"></td>
-                            <td id="shapes_4_8_7"></td>
-                            <td id="shapes_4_8_8"></td>
-                        </tr>
-                    </table>
-                    </center>
-                </div>
+                <div id="shapes_4_holder" class="panel-body"> </div>
             </div>
+            <div id="shapes_5" class="col-xs-2 panel panel-default panel-black">
+                <div class="panel-heading">
+                    <h3 class="panel-title">The Orange Shape</h3>
+                </div>
+                <div id="shapes_5_holder" class="panel-body"> </div>
+            </div>
+            <div class="col-xs-1"></div>
         </div>
         <div id="packing" class="row">
-            <div class="col-xs-12">
+            <div class="col-xs-2"></div>
+            <div class="col-xs-8 panel panel-default">
                 <div class="panel-heading">
                     <h3 class="panel-title">Packing</h3>
                 </div>
                 <div id="packing_holder" class="panel-body">
                 </div>
             </div>
+            <div class="col-xs-2"></div>
         </div>
         <div id="debug">
         </div>
