@@ -1,0 +1,19 @@
+
+#shapes td, #packing td {
+    width: 20px;
+    height: 20px;
+    background-color: white;
+}
+
+#shapes td:hover {
+    background-color: silver;
+}
+
+.panel-red .panel-heading {
+    background-color: red !important;
+}
+
+#debug {
+    font-family: "Courier New", monospace;
+    white-space: pre;
+}
