@@ -1,0 +1,5 @@
+http://ajax.googleapis.com/ajax/libs/jquery/2.1.4/jquery.min.js
+http://maxcdn.bootstrapcdn.com/bootstrap/3.3.4/css/bootstrap.min.css
+http://maxcdn.bootstrapcdn.com/bootstrap/3.3.4/css/bootstrap-theme.min.css
+http://maxcdn.bootstrapcdn.com/bootstrap/3.3.4/js/bootstrap.min.js
+http://raw.githubusercontent.com/mbjordan/Colors/master/colors.min.js
