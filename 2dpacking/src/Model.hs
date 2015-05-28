@@ -143,11 +143,12 @@ model Params{..} = do
 
     -- let's generate some tables
     postConstraint
-        [ Cnegativetable
+        [ cleverTable
             [ topLeft (i1,j1)
             , topLeft (i2,j2)
             ]
             disalloweds
+            allTuples
         | i1 <- [1 .. fst packingDim]
         , j1 <- [1 .. snd packingDim]
         , i2 <- [1 .. fst packingDim]
@@ -177,6 +178,11 @@ model Params{..} = do
                       , bitB == True
                       ]
                 ]
+        , let allTuples =
+                [ [p1, p2]
+                | p1 <- 0 : map pieceID pieces
+                , p2 <- 0 : map pieceID pieces
+                ]
         , not (null disalloweds)
         ]
 
@@ -193,3 +199,11 @@ model Params{..} = do
     searchOrder $ map (,Asc) (reverse topLeftVars)
     -- outputs $ [minCountKind, maxCountKind] ++ countKindVars ++ [scrap, totalPieces] -- ++ topLeftVars
     outputs topLeftVars
+
+cleverTable vars disalloweds allTuples =
+    if length disalloweds <= div (length allTuples) 2
+        then Cnegativetable vars disalloweds
+        else let alloweds = allTuples \\ disalloweds in
+             Ctable vars alloweds
+
+
