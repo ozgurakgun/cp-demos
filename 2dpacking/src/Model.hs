@@ -6,6 +6,7 @@ module Model where
 import Data.List
 import Data.Maybe
 import Data.Function
+import Safe ( atMay )
 import Language.Minion
 
 
@@ -111,14 +112,14 @@ model Params{..} = do
     (countKind , countKindVars ) <- varVector (Discrete 0 (fst packingDim * snd packingDim))
                                               (nub $ map kind pieces)
     (countPiece, countPieceVars) <- varVector (Discrete 0 (fst packingDim * snd packingDim))
-                                              (nub $ map pieceID pieces)
+                                              (      map pieceID pieces)
     totalPieces  <- varDiscrete' "totalPieces"  0 (fst packingDim * snd packingDim)
     minCountKind <- varDiscrete' "minCountKind" 0 (fst packingDim * snd packingDim)
     maxCountKind <- varDiscrete' "maxCountKind" 0 (fst packingDim * snd packingDim)
     scrap        <- varDiscrete' "scrap"        0 (fst packingDim * snd packingDim)
     postConstraint
         [ Coccurrence topLeftVars i (countPiece i)
-        | i <- nub $ map pieceID pieces
+        | i <- map pieceID pieces
         ]
     postConstraint
         [ cSumEq ofKind (countKind k)
@@ -140,6 +141,45 @@ model Params{..} = do
         )
         (constant (fst packingDim * snd packingDim))
 
+    -- let's generate some tables
+    postConstraint
+        [ Cnegativetable
+            [ topLeft (i1,j1)
+            , topLeft (i2,j2)
+            ]
+            disalloweds
+        | i1 <- [1 .. fst packingDim]
+        , j1 <- [1 .. snd packingDim]
+        , i2 <- [1 .. fst packingDim]
+        , j2 <- [1 .. snd packingDim]
+        , (i1, j1) /= (i2, j2)
+        , let iDiff = i1 - i2
+        , let jDiff = j1 - j2
+        , let disalloweds =
+                [ [pieceID p1, pieceID p2]
+                | p1 <- pieces
+                , p2 <- pieces
+                , -- check for overlap here
+                  or  [ True
+                      | a <- [0 .. pieceDim-1]
+                      , b <- [0 .. pieceDim-1]
+                      , let bitA = case atMay (bits p1) a of
+                                      Nothing  -> False
+                                      Just p1' -> case atMay p1' b of
+                                          Nothing   -> False
+                                          Just p1'' -> p1''
+                      , let bitB = case atMay (bits p2) (a+iDiff) of
+                                      Nothing  -> False
+                                      Just p2' -> case atMay p2' (b+jDiff) of
+                                          Nothing   -> False
+                                          Just p2'' -> p2''
+                      , bitA == True
+                      , bitB == True
+                      ]
+                ]
+        , not (null disalloweds)
+        ]
+
     -- postConstraint $ Csumleq [scrap] (constant 35)
     -- postConstraint $ Csumleq [minCountKind] (constant 20)
 
@@ -153,38 +193,3 @@ model Params{..} = do
     searchOrder $ map (,Asc) (reverse topLeftVars)
     -- outputs $ [minCountKind, maxCountKind] ++ countKindVars ++ [scrap, totalPieces] -- ++ topLeftVars
     outputs topLeftVars
-
-
-main :: IO ()
-main = do
-    m <- runMinionBuilder (model (prepPieces params0))
-    runMinion_
-        [RandomiseOrder, CpuLimit 600]
-        m
-        print
-
-
-params0 =
-    Params { pieces = [ Piece { bits = [ [True, True, True]
-                                       , [False, False, False]
-                                       , [False, False, False]
-                                       ]
-                              , kind = "Red"
-                              , orientation = Given
-                              , pieceID = 0
-                              }
-                      , Piece { bits = [ [True, True, False]
-                                       , [True, True, False]
-                                       , [False, False, False]
-                                       ]
-                              , kind = "Blue"
-                              , orientation = Given
-                              , pieceID = 0
-                              }
-                      ]
-           , pieceDim = 3
-           , kindRatio = [ ("Red", 1)
-                         , ("Blue", 2)
-                         ]
-           , packingDim = (20, 20)
-           }
