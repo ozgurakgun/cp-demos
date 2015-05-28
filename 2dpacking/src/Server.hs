@@ -32,6 +32,13 @@ data Packing = Packing { packing :: [[Int]]
 instance FromJSON Packing
 instance ToJSON Packing
 
+data Packings = Packings { packings :: [Packing] }
+    deriving (Eq, Ord, Show, Generic)
+
+instance FromJSON Packings
+instance ToJSON Packings
+
+
 main :: IO ()
 main = scotty 3000 $ do
     post "/solve" $ do
@@ -64,6 +71,7 @@ main = scotty 3000 $ do
         m <- runMinionBuilder (Model.model paramPrepped)
         -- liftIO $ print m
         sols <- liftIO $ runMinion
+            -- [RandomiseOrder, FindAllSols, SolLimit 20]
             [RandomiseOrder, CpuLimit 60]
             -- [CpuLimit 60]
             m
@@ -71,14 +79,21 @@ main = scotty 3000 $ do
         if null sols
             then do
                 liftIO $ putStrLn "Sending all 0s"
-                json $ Packing (chunk (snd packingDim) $ replicate (fst packingDim * snd packingDim) 0)
+                json $ Packings
+                      [Packing (chunk (snd packingDim) $ replicate (fst packingDim * snd packingDim) 0)
                                bitsPerId
                                colourPerId
+                      ]
             else do
-                let finalSol = chunk (snd packingDim) $ map snd (last sols)
-                liftIO $ putStrLn "Final solution"
-                liftIO $ mapM_ print finalSol
-                json $ Packing finalSol bitsPerId colourPerId
+                liftIO $ putStrLn "Sending solutions"
+                -- let finalSol = chunk (snd packingDim) $ map snd (last sols)
+                -- liftIO $ putStrLn "Final solution"
+                -- liftIO $ mapM_ print finalSol
+                json $ Packings
+                    [ Packing finalSol bitsPerId colourPerId
+                    | sol <- sols
+                    , let finalSol = chunk (snd packingDim) $ map snd sol
+                    ]
 
     get "/:filename" $ do
         filename <- param "filename"

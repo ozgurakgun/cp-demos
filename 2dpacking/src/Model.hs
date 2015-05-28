@@ -148,9 +148,9 @@ model Params{..} = do
     -- obj <- pure minCountKind - pure scrap
 
     -- minimising scrap
-    -- maximising minCountKind
+    maximising minCountKind
     -- maximising obj
-    searchOrder $ map (,Asc) topLeftVars
+    searchOrder $ map (,Asc) (reverse topLeftVars)
     -- outputs $ [minCountKind, maxCountKind] ++ countKindVars ++ [scrap, totalPieces] -- ++ topLeftVars
     outputs topLeftVars
 

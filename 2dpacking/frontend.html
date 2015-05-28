@@ -22,11 +22,12 @@
     // 4x8x8
     var nbShapes = 5;
     var shapeDim = 8;
-    var packingDim = [20, 60];
-    var shapeColours = ["red", "aqua", "green", "purple", "orange"];
+    var packingDim = [10, 20];
+    var shapeColours = ["red", "MediumBlue", "green", "purple", "orange"];
     var shapes = new Array(nbShapes);
     var shouldResolve = false;
     var solvingActive = false;
+    var lastPacking = null;
 
     function renderShapes() {
         for (sh = 1; sh <= nbShapes; sh++) {
@@ -39,6 +40,81 @@
                     }
                 }
             }
+        }
+    }
+
+    function renderPacking(thePacking) {
+        console.log(thePacking);
+        for (i1 = 0; i1 < packingDim[0]; i1++) {
+            for (j1 = 0; j1 < packingDim[1]; j1++) {
+                $("#packing_"+(i1+1)+"_"+(j1+1)).css("background-color", "white");
+                $("#packing_"+(i1+1)+"_"+(j1+1)).css("border", "1px solid silver");
+            }
+        }
+        for (i1 = 0; i1 < packingDim[0]; i1++) {
+            for (j1 = 0; j1 < packingDim[1]; j1++) {
+                val = thePacking.packing[i1][j1];
+                if (val != 0) {
+                    thisShape = thePacking.bitsPerId[val-1];
+                    thisColour = perturbeColour(thePacking.colourPerId[val-1]);
+                    // console.log(thisColour);
+                    for (i2 = 0; i2 < shapeDim ; i2++) {
+                        for (j2 = 0; j2 < shapeDim ; j2++) {
+                            if (thisShape[i2][j2]) {
+                                $("#packing_"+(i1+i2+1)+"_"+(j1+j2+1)).css("background-color", thisColour);
+
+                                if (!(j2+1 < shapeDim && thisShape[i2][j2+1])) {
+                                    $("#packing_"+(i1+i2+1)+"_"+(j1+j2+1)).css("border-right", "3px solid black");
+                                }
+                                else if (j2+1 < shapeDim && thisShape[i2][j2+1]) {
+                                    $("#packing_"+(i1+i2+1)+"_"+(j1+j2+1)).css("border-right", "none");
+                                }
+
+
+                                if (!(j2-1 >= 0 && thisShape[i2][j2-1])) {
+                                    $("#packing_"+(i1+i2+1)+"_"+(j1+j2+1)).css("border-left", "3px solid black");
+                                }
+                                else if (j2-1 >= 0 && thisShape[i2][j2-1]) {
+                                    $("#packing_"+(i1+i2+1)+"_"+(j1+j2+1)).css("border-left", "none");
+                                }
+
+                                if (!(i2+1 < shapeDim && thisShape[i2+1][j2])) {
+                                    $("#packing_"+(i1+i2+1)+"_"+(j1+j2+1)).css("border-bottom", "3px solid black");
+                                }
+                                else if (i2+1 < shapeDim && thisShape[i2+1][j2]) {
+                                    $("#packing_"+(i1+i2+1)+"_"+(j1+j2+1)).css("border-bottom", "none");
+                                }
+
+                                if (!(i2-1 >= 0 && thisShape[i2-1][j2])) {
+                                    $("#packing_"+(i1+i2+1)+"_"+(j1+j2+1)).css("border-top", "3px solid black");
+                                }
+                                else if (i2-1 >= 0 && thisShape[i2-1][j2]) {
+                                    $("#packing_"+(i1+i2+1)+"_"+(j1+j2+1)).css("border-top", "none");
+                                }
+
+                            }
+                        }
+                    }
+                }
+                // console.log(val);
+            }
+        }
+    }
+
+    function replay() {
+        if (lastPacking) {
+            myLoop(0, lastPacking, function(){});
+        }
+    }
+
+    function myLoop(n, data, finaliser) {
+        if (n < data.length) {
+            // console.log(data[n])
+            renderPacking(data[n]);
+            setTimeout(function() { myLoop(n+1, data, finaliser); }, 1000);
+        } else {
+            finaliser();
+            console.log("finished animation");
         }
     }
 
@@ -73,44 +149,9 @@
                                , packingDim : packingDim
                                })
               ).done(function(data){
-                  console.log(data.packing);
-                  for (i1 = 0; i1 < packingDim[0]; i1++) {
-                      for (j1 = 0; j1 < packingDim[1]; j1++) {
-                          $("#packing_"+(i1+1)+"_"+(j1+1)).css("background-color", "white");
-                          $("#packing_"+(i1+1)+"_"+(j1+1)).css("border", "1px solid silver");
-                      }
-                  }
-                  for (i1 = 0; i1 < packingDim[0]; i1++) {
-                      for (j1 = 0; j1 < packingDim[1]; j1++) {
-                          val = data.packing[i1][j1];
-                          if (val != 0) {
-                              thisShape = data.bitsPerId[val-1];
-                              thisColour = perturbeColour(data.colourPerId[val-1]);
-                              // console.log(thisColour);
-                              for (i2 = 0; i2 < shapeDim ; i2++) {
-                                  for (j2 = 0; j2 < shapeDim ; j2++) {
-                                      if (thisShape[i2][j2]) {
-                                          $("#packing_"+(i1+i2+1)+"_"+(j1+j2+1)).css("background-color", thisColour);
-                                          if (!(j2+1 < shapeDim && thisShape[i2][j2+1])) {
-                                              $("#packing_"+(i1+i2+1)+"_"+(j1+j2+1)).css("borderRight", "3px solid black");
-                                          }
-                                          if (!(j2-1 >= 0 && thisShape[i2][j2-1])) {
-                                              $("#packing_"+(i1+i2+1)+"_"+(j1+j2+1)).css("borderLeft", "3px solid black");
-                                          }
-                                          if (!(i2+1 < shapeDim && thisShape[i2+1][j2])) {
-                                              $("#packing_"+(i1+i2+1)+"_"+(j1+j2+1)).css("borderBottom", "3px solid black");
-                                          }
-                                          if (!(i2-1 >= 0 && thisShape[i2-1][j2])) {
-                                              $("#packing_"+(i1+i2+1)+"_"+(j1+j2+1)).css("borderTop", "3px solid black");
-                                          }
-                                      }
-                                  }
-                              }
-                          }
-                          // console.log(val);
-                          solvingActive = false;
-                      }
-                  }
+                  console.log("myLoop!")
+                  lastPacking = data.packings;
+                  myLoop(0, data.packings, function() { solvingActive = false });
               })
     }
 
@@ -263,6 +304,13 @@
                 </div>
             </div>
             <div class="col-xs-1"></div>
+        </div>
+        <div class="row">
+            <div class="col-xs-12">
+                <center>
+                    <button type="button" class="btn btn-default" onclick="replay()">Replay</button>
+                </center>
+            </div>
         </div>
         <div id="debug">
         </div>
