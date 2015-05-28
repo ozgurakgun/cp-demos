@@ -179,9 +179,9 @@ model Params{..} = do
                       ]
                 ]
         , let allTuples =
-                [ [p1, p2]
-                | p1 <- 0 : map pieceID pieces
-                , p2 <- 0 : map pieceID pieces
+                [ [pieceID p1, pieceID p2]
+                | p1 <- pieces
+                , p2 <- pieces
                 ]
         , not (null disalloweds)
         ]
@@ -193,17 +193,20 @@ model Params{..} = do
 
     -- obj <- pure minCountKind - pure scrap
 
-    -- minimising scrap
-    maximising minCountKind
+    minimising scrap
+    -- maximising minCountKind
     -- maximising obj
     searchOrder $ map (,Asc) (reverse topLeftVars)
     -- outputs $ [minCountKind, maxCountKind] ++ countKindVars ++ [scrap, totalPieces] -- ++ topLeftVars
     outputs topLeftVars
 
-cleverTable vars disalloweds allTuples =
+cleverTable vars@[v1,v2] disalloweds allTuples =
     if length disalloweds <= div (length allTuples) 2
         then Cnegativetable vars disalloweds
         else let alloweds = allTuples \\ disalloweds in
-             Ctable vars alloweds
+             Cwatched_or [ Ctable vars alloweds
+                         , Cw_literal v1 0
+                         , Cw_literal v2 0
+                         ]
 
 
