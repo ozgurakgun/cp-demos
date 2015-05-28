@@ -36,7 +36,7 @@ shiftLeft xs = if all (False==) (map head xs)
                 else xs
 
 orientations :: Piece -> [Piece]
-orientations p = take 1 $ nubBy ((==) `on` bits)
+orientations p = nubBy ((==) `on` bits)
     [ p { bits        = shiftUp $ shiftLeft $                            bits p
         , orientation = Given
         }
