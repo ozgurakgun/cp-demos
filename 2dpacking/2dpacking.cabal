@@ -7,7 +7,13 @@ build-type:          Simple
 cabal-version:       >=1.10
 
 executable demo-2dpacking
-  main-is:             Main.hs
+  main-is:             Model.hs
   build-depends:       base, minion-hs
+  hs-source-dirs:      src
+  default-language:    Haskell2010
+
+executable demo-2dpacking-server
+  main-is:             Server.hs
+  build-depends:       base, minion-hs, scotty==0.9.1, transformers, aeson
   hs-source-dirs:      src
   default-language:    Haskell2010

@@ -1,16 +1,18 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <script src="https://ajax.googleapis.com/ajax/libs/jquery/2.1.4/jquery.min.js"></script>
+    <script src="libs-jquery.min.js"></script>
 
     <!-- Latest compiled and minified CSS -->
-    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.4/css/bootstrap.min.css">
+    <link rel="stylesheet" href="libs-bootstrap.min.css">
 
     <!-- Optional theme -->
-    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.4/css/bootstrap-theme.min.css">
+    <link rel="stylesheet" href="libs-bootstrap-theme.min.css">
 
     <!-- Latest compiled and minified JavaScript -->
-    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.4/js/bootstrap.min.js"></script>
+    <script src="libs-bootstrap.min.js"></script>
+
+    <script src="libs-colors.min.js"></script>
 
     <meta name="viewport" content="width=device-width, initial-scale=1">
 
@@ -20,9 +22,11 @@
     // 4x8x8
     var nbShapes = 5;
     var shapeDim = 8;
-    var packingDim = [20,40];
-    var shapeColours = ["red", "blue", "green", "black", "orange"];
+    var packingDim = [20, 60];
+    var shapeColours = ["red", "aqua", "green", "purple", "orange"];
     var shapes = new Array(nbShapes);
+    var shouldResolve = false;
+    var solvingActive = false;
 
     function renderShapes() {
         for (sh = 1; sh <= nbShapes; sh++) {
@@ -38,20 +42,111 @@
         }
     }
 
+    function getRandomInt(min, max) {
+        return Math.floor(Math.random() * (max - min)) + min;
+    }
+
+    function maxInt(a, b) {
+        if (a < b) return b;
+        return a;
+    }
+
+    function minInt(a, b) {
+        if (a < b) return a;
+        return b;
+    }
+
+    function perturbeColour(colour) {
+        return colour;
+        // rgb = $c.name2rgb(colour).a;
+        // r = minInt(255, maxInt(0, rgb[0] + getRandomInt(-90, 90)));
+        // g = minInt(255, maxInt(0, rgb[1] + getRandomInt(-90, 90)));
+        // b = minInt(255, maxInt(0, rgb[2] + getRandomInt(-90, 90)));
+        // return $c.rgb2hex(r,g,b);
+    }
+
+    function solve() {
+        solvingActive = true;
+        $.post( "solve"
+              , JSON.stringify({ pieces : shapes
+                               , pieceColours : shapeColours
+                               , packingDim : packingDim
+                               })
+              ).done(function(data){
+                  console.log(data.packing);
+                  for (i1 = 0; i1 < packingDim[0]; i1++) {
+                      for (j1 = 0; j1 < packingDim[1]; j1++) {
+                          $("#packing_"+(i1+1)+"_"+(j1+1)).css("background-color", "white");
+                          $("#packing_"+(i1+1)+"_"+(j1+1)).css("border", "1px solid silver");
+                      }
+                  }
+                  for (i1 = 0; i1 < packingDim[0]; i1++) {
+                      for (j1 = 0; j1 < packingDim[1]; j1++) {
+                          val = data.packing[i1][j1];
+                          if (val != 0) {
+                              thisShape = data.bitsPerId[val-1];
+                              thisColour = perturbeColour(data.colourPerId[val-1]);
+                              console.log(thisColour);
+                              // $("#packing_"+(i1+1)+"_"+(j1+1)).css("borderTop", "thick solid black");
+                              // $("#packing_"+(i1+1)+"_"+(j1+1)).css("borderLeft", "thick solid black");
+                              for (i2 = 0; i2 < shapeDim ; i2++) {
+                                  for (j2 = 0; j2 < shapeDim ; j2++) {
+                                      if (thisShape[i2][j2]) {
+                                          $("#packing_"+(i1+i2+1)+"_"+(j1+j2+1)).css("background-color", thisColour);
+                                          if (!(j2+1 < shapeDim && thisShape[i2][j2+1])) {
+                                              $("#packing_"+(i1+i2+1)+"_"+(j1+j2+1)).css("borderRight", "3px solid black");
+                                          }
+                                          if (!(j2-1 >= 0 && thisShape[i2][j2-1])) {
+                                              $("#packing_"+(i1+i2+1)+"_"+(j1+j2+1)).css("borderLeft", "3px solid black");
+                                          }
+                                          if (!(i2+1 < shapeDim && thisShape[i2+1][j2])) {
+                                              $("#packing_"+(i1+i2+1)+"_"+(j1+j2+1)).css("borderBottom", "3px solid black");
+                                          }
+                                          if (!(i2-1 >= 0 && thisShape[i2-1][j2])) {
+                                              $("#packing_"+(i1+i2+1)+"_"+(j1+j2+1)).css("borderTop", "3px solid black");
+                                          }
+                                      }
+                                  }
+                              }
+                          }
+                          // console.log(val);
+                          solvingActive = false;
+                      }
+                  }
+              })
+    }
+
+    function poll_resolve() {
+        if (shouldResolve && !solvingActive) {
+            shouldResolve = false;
+            solve();
+        }
+        setTimeout(poll_resolve, 5000);
+    }
+
     function generate_handler(sh,i,j) {
         return function(event) {
+            falsealarm = true;
             if (event.type == "mouseover") {
                 if (event.buttons == 1) {
+                    falsealarm = false;
                     shapes[sh-1][i-1][j-1] = true;
                 } else if (event.buttons == 2) {
+                    falsealarm = false;
                     shapes[sh-1][i-1][j-1] = false;
                 }
             } else if (event.type == "mousedown") {
+                falsealarm = false;
                 shapes[sh-1][i-1][j-1] = true;
             } else if (event.type == "contextmenu") {
+                falsealarm = false;
                 shapes[sh-1][i-1][j-1] = false;
             }
+            if (falsealarm) {
+                return false;
+            }
             renderShapes();
+            shouldResolve = true;
             return false;
         };
     }
@@ -108,6 +203,9 @@
                 }
             }
         }
+
+        poll_resolve();
+
     });
 
     </script>
@@ -143,9 +241,9 @@
                 </div>
                 <div id="shapes_3_holder" class="panel-body"> </div>
             </div>
-            <div id="shapes_4" class="col-xs-2 panel panel-default panel-black">
+            <div id="shapes_4" class="col-xs-2 panel panel-default panel-purple">
                 <div class="panel-heading">
-                    <h3 class="panel-title">The Black Shape</h3>
+                    <h3 class="panel-title">The Purple Shape</h3>
                 </div>
                 <div id="shapes_4_holder" class="panel-body"> </div>
             </div>
@@ -158,15 +256,15 @@
             <div class="col-xs-1"></div>
         </div>
         <div id="packing" class="row">
-            <div class="col-xs-2"></div>
-            <div class="col-xs-8 panel panel-default">
+            <div class="col-xs-1"></div>
+            <div class="col-xs-10 panel panel-default">
                 <div class="panel-heading">
                     <h3 class="panel-title">Packing</h3>
                 </div>
                 <div id="packing_holder" class="panel-body">
                 </div>
             </div>
-            <div class="col-xs-2"></div>
+            <div class="col-xs-1"></div>
         </div>
         <div id="debug">
         </div>

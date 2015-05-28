@@ -1,7 +1,7 @@
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE TupleSections #-}
 
-module Main where
+module Model where
 
 import Data.List
 import Data.Maybe
@@ -36,7 +36,7 @@ shiftLeft xs = if all (False==) (map head xs)
                 else xs
 
 orientations :: Piece -> [Piece]
-orientations p = nubBy ((==) `on` bits)
+orientations p = take 1 $ nubBy ((==) `on` bits)
     [ p { bits        = shiftUp $ shiftLeft $                            bits p
         , orientation = Given
         }
@@ -57,6 +57,7 @@ data Params = Params
     , kindRatio :: [(PieceKind, Int)]
     , packingDim :: (Int, Int)
     }
+    deriving (Show)
 
 prepPieces :: Params -> Params
 prepPieces p = p { pieces = reID $ concatMap orientations $ pieces p }
@@ -67,7 +68,7 @@ prepPieces p = p { pieces = reID $ concatMap orientations $ pieces p }
 model Params{..} = do
 
     let nbPieces = length pieces
-    let coordToInt (i,j) = (i-1) * fst packingDim + j
+    let coordToInt (i,j) = (i-1) * snd packingDim + j
 
     (topLeft, topLeftVars) <- varVector (Discrete 0 nbPieces)           -- n=0 means this is not a top-left of a piece
         [ (i,j)                                                         -- n>0 means this is a top-left of piece n
@@ -140,23 +141,25 @@ model Params{..} = do
         (constant (fst packingDim * snd packingDim))
 
     -- postConstraint $ Csumleq [scrap] (constant 35)
-    postConstraint $ Csumleq [minCountKind] (constant 20)
+    -- postConstraint $ Csumleq [minCountKind] (constant 20)
 
     -- symmetry breaking between pieces of the same kind
 
+    -- obj <- pure minCountKind - pure scrap
 
-    minimising scrap
+    -- minimising scrap
     -- maximising minCountKind
-    searchOrder $ map (,Asc) $ topLeftVars
-    outputs $ [minCountKind, maxCountKind] ++ countKindVars ++ [scrap, totalPieces] -- ++ topLeftVars
-    
+    -- maximising obj
+    searchOrder $ map (,Asc) topLeftVars
+    -- outputs $ [minCountKind, maxCountKind] ++ countKindVars ++ [scrap, totalPieces] -- ++ topLeftVars
+    outputs topLeftVars
 
 
 main :: IO ()
 main = do
     m <- runMinionBuilder (model (prepPieces params0))
     runMinion_
-        [RandomiseOrder, CpuLimit 10]
+        [RandomiseOrder, CpuLimit 600]
         m
         print
 
@@ -183,5 +186,5 @@ params0 =
            , kindRatio = [ ("Red", 1)
                          , ("Blue", 2)
                          ]
-           , packingDim = (5, 10)
+           , packingDim = (20, 20)
            }
