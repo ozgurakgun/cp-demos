@@ -66,6 +66,7 @@ prepPieces p = p { pieces = reID $ concatMap orientations $ pieces p }
           reID ps = zipWith (\ piece i -> piece { pieceID = i } ) ps [1..]
 
 
+model :: Monad m => Params -> MinionBuilder m ()
 model Params{..} = do
 
     let nbPieces = length pieces
@@ -141,49 +142,59 @@ model Params{..} = do
         )
         (constant (fst packingDim * snd packingDim))
 
-    -- let's generate some tables
-    postConstraint
-        [ cleverTable
-            [ topLeft (i1,j1)
-            , topLeft (i2,j2)
-            ]
-            disalloweds
-            allTuples
-        | i1 <- [1 .. fst packingDim]
-        , j1 <- [1 .. snd packingDim]
-        , i2 <- [1 .. fst packingDim]
-        , j2 <- [1 .. snd packingDim]
-        , (i1, j1) /= (i2, j2)
-        , let iDiff = i1 - i2
-        , let jDiff = j1 - j2
-        , let disalloweds =
-                [ [pieceID p1, pieceID p2]
-                | p1 <- pieces
-                , p2 <- pieces
-                , -- check for overlap here
-                  or  [ True
-                      | a <- [0 .. pieceDim-1]
-                      , b <- [0 .. pieceDim-1]
-                      , let bitA = case atMay (bits p1) a of
-                                      Nothing  -> False
-                                      Just p1' -> case atMay p1' b of
-                                          Nothing   -> False
-                                          Just p1'' -> p1''
-                      , let bitB = case atMay (bits p2) (a+iDiff) of
-                                      Nothing  -> False
-                                      Just p2' -> case atMay p2' (b+jDiff) of
-                                          Nothing   -> False
-                                          Just p2'' -> p2''
-                      , bitA == True
-                      , bitB == True
-                      ]
-                ]
-        , let allTuples =
-                [ [pieceID p1, pieceID p2]
-                | p1 <- pieces
-                , p2 <- pieces
-                ]
-        , not (null disalloweds)
+    -- -- let's generate some tables
+    -- postConstraint
+    --     [ cleverTable
+    --         [ topLeft (i1,j1)
+    --         , topLeft (i2,j2)
+    --         ]
+    --         disalloweds
+    --         allTuples
+    --     | i1 <- [1 .. fst packingDim]
+    --     , j1 <- [1 .. snd packingDim]
+    --     , i2 <- [1 .. fst packingDim]
+    --     , j2 <- [1 .. snd packingDim]
+    --     , (i1, j1) /= (i2, j2)
+    --     , let iDiff = i1 - i2
+    --     , let jDiff = j1 - j2
+    --     , let disalloweds =
+    --             [ [pieceID p1, pieceID p2]
+    --             | p1 <- pieces
+    --             , p2 <- pieces
+    --             , -- check for overlap here
+    --               or  [ True
+    --                   | a <- [0 .. pieceDim-1]
+    --                   , b <- [0 .. pieceDim-1]
+    --                   , let bitA = case atMay (bits p1) a of
+    --                                   Nothing  -> False
+    --                                   Just p1' -> case atMay p1' b of
+    --                                       Nothing   -> False
+    --                                       Just p1'' -> p1''
+    --                   , let bitB = case atMay (bits p2) (a+iDiff) of
+    --                                   Nothing  -> False
+    --                                   Just p2' -> case atMay p2' (b+jDiff) of
+    --                                       Nothing   -> False
+    --                                       Just p2'' -> p2''
+    --                   , bitA == True
+    --                   , bitB == True
+    --                   ]
+    --             ]
+    --     , let allTuples =
+    --             [ [pieceID p1, pieceID p2]
+    --             | p1 <- pieces
+    --             , p2 <- pieces
+    --             ]
+    --     , not (null disalloweds)
+    --     ]
+
+    -- spread
+    postConstraint =<< sequence
+        [ do
+            diff <- abs $ pure (countKind a) - pure (countKind b)
+            return $ Cw_inset diff [0,2]
+        | a <- nub $ map kind pieces
+        , b <- nub $ map kind pieces
+        , a < b
         ]
 
     -- postConstraint $ Csumleq [scrap] (constant 35)
