@@ -71,27 +71,25 @@ model Params{..} = do
 
     let nbPieces = length pieces
     let coordToInt (i,j) = (i-1) * snd packingDim + j
+    let intToCoord k = let (i,j) = divMod k (snd packingDim) in (i+1, j)
+
+    let allCoordinates = [ (i,j) | i <- [1 .. fst packingDim], j <- [1 .. snd packingDim] ]
 
     (topLeft, topLeftVars) <- varVector (Discrete 0 nbPieces)           -- n=0 means this is not a top-left of a piece
-        [ (i,j)                                                         -- n>0 means this is a top-left of piece n
-        | i <- [1 .. fst packingDim]
-        , j <- [1 .. snd packingDim]
-        ]
+        allCoordinates                                                  -- n>0 means this is a top-left of piece n
 
     -- each cell has an owner, the corresponding topLeft coordinate
     -- or is 0
     (owner, ownerVars) <- varVector (Discrete 0 (fst packingDim * snd packingDim))
-        [ (i,j)
-        | i <- [1 .. fst packingDim]
-        , j <- [1 .. snd packingDim]
-        ]
+        allCoordinates
 
     postConstraint
-        [ Cwatched_or ( Cw_literal (topLeft (i,j)) 0
+        [ Cwatched_or ( Cwatched_and [ Cw_literal (topLeft (i,j)) 0
+                                     , Cw_notliteral (owner (i,j)) (coordToInt (i,j))        -- not owned by itself
+                                     ]
                       : topLeftOfAPiece
                       )
-        | i <- [1 .. fst packingDim]
-        , j <- [1 .. snd packingDim]
+        | (i,j) <- allCoordinates
         , let topLeftOfAPiece =
                 [ Cwatched_and ( (Cw_literal (topLeft (i,j)) (pieceID p))
                                : owners
@@ -107,6 +105,21 @@ model Params{..} = do
                 , let owners = catMaybes owners'
                 , length owners == length owners'           -- otherwise this piece isn't a candidate
                 ]
+        ]
+
+    -- if a cell (iC,jC) claims to be owned by a piece whose topLeft is (iTL,jTL)
+    -- then (iTL, jTL) is owned by the same piece
+    postConstraint
+        [ Cwatched_or
+            $ (Cw_literal (owner (iC,jC)) 0)              -- either 0
+            : [ Cwatched_and
+                    [ Cw_literal (owner (iC , jC )) tl    -- or its owner's owner is the same owner (cryptic much?)
+                    , Cw_literal (owner (iTL, jTL)) tl
+                    ]
+              | (iTL, jTL) <- allCoordinates
+              , let tl = coordToInt (iTL, jTL)
+              ]
+        | (iC , jC) <- allCoordinates
         ]
 
     -- counting number of times a PieceKind occurs
@@ -188,15 +201,51 @@ model Params{..} = do
     --     ]
 
     -- spread
-    -- postConstraint =<< sequence
-    --     [ do
-    --         diff <- abs $ pure (countKind a) - pure (countKind b)
-    --         return $ Cw_inset diff [0..4]
-    --     | a <- nub $ map kind pieces
-    --     , b <- nub $ map kind pieces
-    --     , a < b
-    --     ]
+    postConstraint =<< sequence
+        [ do
+            diff <- abs $ pure (countKind a) - pure (countKind b)
+            return $ Cw_inset diff [0..4]
+        | a <- nub $ map kind pieces
+        , b <- nub $ map kind pieces
+        , a < b
+        ]
 
+    -- at least one of the cells on the left should be non-empty (or else, this piece could slide left)
+    postConstraint
+        [ Cwatched_or
+                [ Cw_literal (topLeft (i,j)) 0                                              -- this is not the top left of a piece
+                , Cwatched_or leftNonEmpty
+                ]
+        | i <- [1 .. fst packingDim]
+        , j <- [2 .. snd packingDim]
+        , let
+            leftNonEmpty =
+                [ Cwatched_and [ Ceq           (owner (i,j))     (owner (i+i2,j))           -- is part of this piece
+                               , Cw_notliteral                   (owner (i+i2,j-1)) 0       -- and its left is non-empty
+                               ]
+                | i2 <- [0 .. pieceDim-1]
+                , i+i2 <= fst packingDim
+                ]
+        , not (null leftNonEmpty)
+        ]
+
+    postConstraint
+        [ Cwatched_or
+                [ Cw_literal (topLeft (i,j)) 0                                              -- this is not the top left of a piece
+                , Cwatched_or leftNonEmpty
+                ]
+        | i <- [2 .. fst packingDim]
+        , j <- [1 .. snd packingDim]
+        , let
+            leftNonEmpty =
+                [ Cwatched_and [ Ceq           (owner (i,j))     (owner (i  ,j+j2))         -- is part of this piece
+                               , Cw_notliteral                   (owner (i-1,j+j2)) 0       -- and its left is non-empty
+                               ]
+                | j2 <- [0 .. pieceDim-1]
+                , j+j2 <= snd packingDim
+                ]
+        , not (null leftNonEmpty)
+        ]
 
     -- postConstraint $ Csumleq [scrap] (constant 35)
     -- postConstraint $ Csumleq [minCountKind] (constant 20)
@@ -209,6 +258,7 @@ model Params{..} = do
     -- maximising minCountKind
     -- maximising obj
     searchOrder $ map (,Asc) (reverse topLeftVars)
+    -- searchOrder $ map (,Asc) topLeftVars
     -- outputs $ [minCountKind, maxCountKind] ++ countKindVars ++ [scrap, totalPieces] -- ++ topLeftVars
     outputs (scrap:topLeftVars)
 

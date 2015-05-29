@@ -74,7 +74,7 @@ main = scotty 3000 $ do
         m <- runMinionBuilder (Model.model paramPrepped)
         -- liftIO $ print m
         let timePerMinion = 5
-        let nbRuns = 4
+        let nbRuns = 8
         solss <- liftIO $ parallel $ flip map [1..nbRuns] $ \ i -> do
                     let opts = if i == 0 then [CpuLimit timePerMinion]
                                          else [CpuLimit timePerMinion, RandomiseOrder]
@@ -100,8 +100,7 @@ main = scotty 3000 $ do
         --                 $ concat solss
 
         -- picking the best run
-        let sols = snd                                      -- only keep the "run"
-                 $ head                                     -- pick the smallest lastScrap
+        let sols = (\ xs -> if null xs then [] else snd $ head xs )     -- pick the smallest lastScrap, only keep the run
                  $ sortBy (compare `on` fst)
                     [ (lastScrap, run)
                     | run <- solss
@@ -119,7 +118,7 @@ main = scotty 3000 $ do
                       ]
             else do
                 liftIO $ putStrLn $ "Sending solutions: " ++ show (length sols)
-                liftIO $ putStrLn $ "With scrap       : " ++ show (head $ last sols)
+                liftIO $ putStrLn $ "With scrap       : " ++ show (snd $ head $ last sols)
                 -- let finalSol = chunk (snd packingDim) $ map snd (last sols)
                 -- liftIO $ putStrLn "Final solution"
                 -- liftIO $ mapM_ print finalSol
