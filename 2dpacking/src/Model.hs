@@ -70,8 +70,8 @@ model :: Monad m => Params -> MinionBuilder m ()
 model Params{..} = do
 
     let nbPieces = length pieces
-    let coordToInt (i,j) = (i-1) * snd packingDim + j
-    let intToCoord k = let (i,j) = divMod k (snd packingDim) in (i+1, j)
+    let coordToInt (i,j) = 1 + ((i-1) * snd packingDim + (j - 1))
+    let intToCoord k = let (i,j) = divMod (k-1) (snd packingDim) in (i+1, j+1)
 
     let allCoordinates = [ (i,j) | i <- [1 .. fst packingDim], j <- [1 .. snd packingDim] ]
 
@@ -83,38 +83,52 @@ model Params{..} = do
     (owner, ownerVars) <- varVector (Discrete 0 (fst packingDim * snd packingDim))
         allCoordinates
 
-    postConstraint
-        [ Cwatched_or ( Cwatched_and [ Cw_literal (topLeft (i,j)) 0
-                                     , Cw_notliteral (owner (i,j)) (coordToInt (i,j))        -- not owned by itself
-                                     ]
-                      : topLeftOfAPiece
-                      )
+    postConstraint =<< sequence
+        [ if all isJust allOwnedByThis
+            then do
+                c1 <- reifyConstraint $ Cw_literal (topLeft (i,j)) (pieceID p)
+                c2 <- reifyConstraint $ Cwatched_and $ allOwnedByThisCons
+                                                    ++ nothingElseIsOwnedByThisCons
+                return $ Ceq c1 c2
+            else
+                -- this piece isn't a candidate
+                return $ Cw_notliteral (topLeft (i,j)) (pieceID p)
         | (i,j) <- allCoordinates
-        , let topLeftOfAPiece =
-                [ Cwatched_and ( (Cw_literal (topLeft (i,j)) (pieceID p))
-                               : owners
-                               )
-                | p <- pieces
-                , let owners' = [ if i+i2 <= fst packingDim && j+j2 <= snd packingDim
-                                     then Just $ Cw_literal (owner (i+i2, j+j2)) (coordToInt (i,j))
-                                     else Nothing
-                                | i2 <- [0..pieceDim-1]
-                                , j2 <- [0..pieceDim-1]
-                                , bits p !! i2 !! j2
-                                ]
-                , let owners = catMaybes owners'
-                , length owners == length owners'           -- otherwise this piece isn't a candidate
-                ]
+        , p <- pieces
+        , let allOwnedByThis =
+                    [ if i+i2 <= fst packingDim && j+j2 <= snd packingDim
+                        then Just (i+i2, j+j2)
+                        else Nothing
+                    | i2 <- [0..pieceDim-1]
+                    , j2 <- [0..pieceDim-1]
+                    , bits p !! i2 !! j2
+                    ]
+        , let nothingElseIsOwnedByThis =
+                    [ other
+                    | other <- allCoordinates
+                    , Just other `notElem` allOwnedByThis
+                    ]
+        , let allOwnedByThisCons =
+                    [ Cw_literal (owner (i2, j2)) (coordToInt (i,j))
+                    | Just (i2, j2) <- allOwnedByThis
+                    ]
+        , let nothingElseIsOwnedByThisCons =
+                    [ Cw_notliteral (owner (i2, j2)) (coordToInt (i,j))
+                    | (i2, j2) <- nothingElseIsOwnedByThis
+                    ]
         ]
+
+    -- 
 
     -- if a cell (iC,jC) claims to be owned by a piece whose topLeft is (iTL,jTL)
     -- then (iTL, jTL) is owned by the same piece
     postConstraint
         [ Cwatched_or
-            $ (Cw_literal (owner (iC,jC)) 0)              -- either 0
+            $ (Cw_literal (owner (iC,jC)) 0)             -- either empty
             : [ Cwatched_and
-                    [ Cw_literal (owner (iC , jC )) tl    -- or its owner's owner is the same owner (cryptic much?)
-                    , Cw_literal (owner (iTL, jTL)) tl
+                    [ Cw_literal    (owner   (iC , jC )) tl    -- or its owner's owner is the same owner (cryptic much?)
+                    -- , Cw_literal    (owner   (iTL, jTL)) tl
+                    , Cw_notliteral (topLeft (iTL, jTL)) 0
                     ]
               | (iTL, jTL) <- allCoordinates
               , let tl = coordToInt (iTL, jTL)
@@ -210,42 +224,42 @@ model Params{..} = do
         , a < b
         ]
 
-    -- at least one of the cells on the left should be non-empty (or else, this piece could slide left)
-    postConstraint
-        [ Cwatched_or
-                [ Cw_literal (topLeft (i,j)) 0                                              -- this is not the top left of a piece
-                , Cwatched_or leftNonEmpty
-                ]
-        | i <- [1 .. fst packingDim]
-        , j <- [2 .. snd packingDim]
-        , let
-            leftNonEmpty =
-                [ Cwatched_and [ Ceq           (owner (i,j))     (owner (i+i2,j))           -- is part of this piece
-                               , Cw_notliteral                   (owner (i+i2,j-1)) 0       -- and its left is non-empty
-                               ]
-                | i2 <- [0 .. pieceDim-1]
-                , i+i2 <= fst packingDim
-                ]
-        , not (null leftNonEmpty)
-        ]
-
-    postConstraint
-        [ Cwatched_or
-                [ Cw_literal (topLeft (i,j)) 0                                              -- this is not the top left of a piece
-                , Cwatched_or leftNonEmpty
-                ]
-        | i <- [2 .. fst packingDim]
-        , j <- [1 .. snd packingDim]
-        , let
-            leftNonEmpty =
-                [ Cwatched_and [ Ceq           (owner (i,j))     (owner (i  ,j+j2))         -- is part of this piece
-                               , Cw_notliteral                   (owner (i-1,j+j2)) 0       -- and its left is non-empty
-                               ]
-                | j2 <- [0 .. pieceDim-1]
-                , j+j2 <= snd packingDim
-                ]
-        , not (null leftNonEmpty)
-        ]
+    -- -- at least one of the cells on the left should be non-empty (or else, this piece could slide left)
+    -- postConstraint
+    --     [ Cwatched_or
+    --             [ Cw_literal (topLeft (i,j)) 0                                              -- this is not the top left of a piece
+    --             , Cwatched_or leftNonEmpty
+    --             ]
+    --     | i <- [1 .. fst packingDim]
+    --     , j <- [2 .. snd packingDim]
+    --     , let
+    --         leftNonEmpty =
+    --             [ Cwatched_and [ Ceq           (owner (i,j))     (owner (i+i2,j))           -- is part of this piece
+    --                            , Cw_notliteral                   (owner (i+i2,j-1)) 0       -- and its left is non-empty
+    --                            ]
+    --             | i2 <- [0 .. pieceDim-1]
+    --             , i+i2 <= fst packingDim
+    --             ]
+    --     , not (null leftNonEmpty)
+    --     ]
+    --
+    -- postConstraint
+    --     [ Cwatched_or
+    --             [ Cw_literal (topLeft (i,j)) 0                                              -- this is not the top left of a piece
+    --             , Cwatched_or leftNonEmpty
+    --             ]
+    --     | i <- [2 .. fst packingDim]
+    --     , j <- [1 .. snd packingDim]
+    --     , let
+    --         leftNonEmpty =
+    --             [ Cwatched_and [ Ceq           (owner (i,j))     (owner (i  ,j+j2))         -- is part of this piece
+    --                            , Cw_notliteral                   (owner (i-1,j+j2)) 0       -- and its left is non-empty
+    --                            ]
+    --             | j2 <- [0 .. pieceDim-1]
+    --             , j+j2 <= snd packingDim
+    --             ]
+    --     , not (null leftNonEmpty)
+    --     ]
 
     -- postConstraint $ Csumleq [scrap] (constant 35)
     -- postConstraint $ Csumleq [minCountKind] (constant 20)
@@ -260,7 +274,7 @@ model Params{..} = do
     searchOrder $ map (,Asc) (reverse topLeftVars)
     -- searchOrder $ map (,Asc) topLeftVars
     -- outputs $ [minCountKind, maxCountKind] ++ countKindVars ++ [scrap, totalPieces] -- ++ topLeftVars
-    outputs (scrap:topLeftVars)
+    outputs (scrap:topLeftVars++ownerVars)
 
 cleverTable vars@[v1,v2] disalloweds allTuples =
     if length disalloweds <= div (length allTuples) 2

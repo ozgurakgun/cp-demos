@@ -26,7 +26,9 @@ data Shapes = Shapes { pieces :: [[[Bool]]]
 instance FromJSON Shapes
 instance ToJSON Shapes
 
-data Packing = Packing { packing :: [[Int]] }
+data Packing = Packing { packing :: [[Int]]
+                       , owners  :: [[Int]]
+                       }
     deriving (Eq, Ord, Show, Generic)
 
 instance FromJSON Packing
@@ -112,7 +114,16 @@ main = scotty 3000 $ do
             then do
                 liftIO $ putStrLn "Sending all 0s"
                 json $ Packings bitsPerId colourPerId
-                      [Packing (chunk (snd packingDim) $ replicate (fst packingDim * snd packingDim) 0)
+                      [Packing [ [ 0
+                                 | i <- [1..fst packingDim]
+                                 ]
+                               | j <- [1..snd packingDim]
+                               ]
+                               [ [ 0
+                                 | i <- [1..fst packingDim]
+                                 ]
+                               | j <- [1..snd packingDim]
+                               ]
                       ]
             else do
                 liftIO $ putStrLn $ "Sending solutions: " ++ show (length sols)
@@ -121,9 +132,10 @@ main = scotty 3000 $ do
                 -- liftIO $ putStrLn "Final solution"
                 -- liftIO $ mapM_ print finalSol
                 json $ Packings bitsPerId colourPerId
-                    [ Packing finalSol
+                    [ Packing finalSol owners
                     | sol <- sols
-                    , let finalSol = chunk (snd packingDim) $ drop 1 $ map snd sol
+                    , let finalSol = chunk (snd packingDim) $ take (fst packingDim * snd packingDim) $ drop 1 $ map snd sol
+                    , let owners   = chunk (snd packingDim) $ drop (fst packingDim * snd packingDim) $ drop 1 $ map snd sol
                     ]
 
     get "/:filename" $ do
