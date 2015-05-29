@@ -43,7 +43,7 @@
         }
     }
 
-    function renderPacking(thePacking) {
+    function renderPacking(thePacking, bitsPerId, colourPerId) {
         console.log(thePacking);
         for (i1 = 0; i1 < packingDim[0]; i1++) {
             for (j1 = 0; j1 < packingDim[1]; j1++) {
@@ -55,8 +55,8 @@
             for (j1 = 0; j1 < packingDim[1]; j1++) {
                 val = thePacking.packing[i1][j1];
                 if (val != 0) {
-                    thisShape = thePacking.bitsPerId[val-1];
-                    thisColour = perturbeColour(thePacking.colourPerId[val-1]);
+                    thisShape = bitsPerId[val-1];
+                    thisColour = perturbeColour(colourPerId[val-1]);
                     // console.log(thisColour);
                     for (i2 = 0; i2 < shapeDim ; i2++) {
                         for (j2 = 0; j2 < shapeDim ; j2++) {
@@ -108,9 +108,9 @@
     }
 
     function myLoop(n, data, finaliser) {
-        if (n < data.length) {
-            // console.log(data[n])
-            renderPacking(data[n]);
+        if (n < data.packings.length) {
+            // console.log(data.packings[n])
+            renderPacking(data.packings[n], data.bitsPerId, data.colourPerId);
             setTimeout(function() { myLoop(n+1, data, finaliser); }, 500);
         } else {
             finaliser();
@@ -150,8 +150,8 @@
                                })
               ).done(function(data){
                   console.log("myLoop!")
-                  lastPacking = data.packings;
-                  myLoop(0, data.packings, function() { solvingActive = false });
+                  lastPacking = data;
+                  myLoop(0, data, function() { solvingActive = false });
               })
     }
 

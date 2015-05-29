@@ -26,16 +26,16 @@ data Shapes = Shapes { pieces :: [[[Bool]]]
 instance FromJSON Shapes
 instance ToJSON Shapes
 
-data Packing = Packing { packing :: [[Int]]
-                       , bitsPerId :: [ [[Bool]] ]
-                       , colourPerId :: [ String ]
-                       }
+data Packing = Packing { packing :: [[Int]] }
     deriving (Eq, Ord, Show, Generic)
 
 instance FromJSON Packing
 instance ToJSON Packing
 
-data Packings = Packings { packings :: [Packing] }
+data Packings = Packings { bitsPerId :: [ [[Bool]] ]
+                         , colourPerId :: [ String ]
+                         , packings :: [Packing]
+                         }
     deriving (Eq, Ord, Show, Generic)
 
 instance FromJSON Packings
@@ -74,8 +74,8 @@ main = scotty 3000 $ do
         m <- runMinionBuilder (Model.model paramPrepped)
         -- liftIO $ print m
         let timePerMinion = 5
-        let nbRuns = 8
-        solss <- liftIO $ parallel $ flip map [1..nbRuns] $ \ i -> do
+        let nbRuns = 0
+        solss <- liftIO $ parallel $ flip map [0..nbRuns] $ \ i -> do
                     let opts = if i == 0 then [CpuLimit timePerMinion]
                                          else [CpuLimit timePerMinion, RandomiseOrder]
                     putStrLn $ "Running Minion " ++ show i
@@ -111,10 +111,8 @@ main = scotty 3000 $ do
         if null sols
             then do
                 liftIO $ putStrLn "Sending all 0s"
-                json $ Packings
+                json $ Packings bitsPerId colourPerId
                       [Packing (chunk (snd packingDim) $ replicate (fst packingDim * snd packingDim) 0)
-                               bitsPerId
-                               colourPerId
                       ]
             else do
                 liftIO $ putStrLn $ "Sending solutions: " ++ show (length sols)
@@ -122,8 +120,8 @@ main = scotty 3000 $ do
                 -- let finalSol = chunk (snd packingDim) $ map snd (last sols)
                 -- liftIO $ putStrLn "Final solution"
                 -- liftIO $ mapM_ print finalSol
-                json $ Packings
-                    [ Packing finalSol bitsPerId colourPerId
+                json $ Packings bitsPerId colourPerId
+                    [ Packing finalSol
                     | sol <- sols
                     , let finalSol = chunk (snd packingDim) $ drop 1 $ map snd sol
                     ]
