@@ -188,14 +188,15 @@ model Params{..} = do
     --     ]
 
     -- spread
-    postConstraint =<< sequence
-        [ do
-            diff <- abs $ pure (countKind a) - pure (countKind b)
-            return $ Cw_inset diff [0,2]
-        | a <- nub $ map kind pieces
-        , b <- nub $ map kind pieces
-        , a < b
-        ]
+    -- postConstraint =<< sequence
+    --     [ do
+    --         diff <- abs $ pure (countKind a) - pure (countKind b)
+    --         return $ Cw_inset diff [0..4]
+    --     | a <- nub $ map kind pieces
+    --     , b <- nub $ map kind pieces
+    --     , a < b
+    --     ]
+
 
     -- postConstraint $ Csumleq [scrap] (constant 35)
     -- postConstraint $ Csumleq [minCountKind] (constant 20)
@@ -209,7 +210,7 @@ model Params{..} = do
     -- maximising obj
     searchOrder $ map (,Asc) (reverse topLeftVars)
     -- outputs $ [minCountKind, maxCountKind] ++ countKindVars ++ [scrap, totalPieces] -- ++ topLeftVars
-    outputs topLeftVars
+    outputs (scrap:topLeftVars)
 
 cleverTable vars@[v1,v2] disalloweds allTuples =
     if length disalloweds <= div (length allTuples) 2

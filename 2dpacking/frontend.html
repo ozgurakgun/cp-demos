@@ -111,7 +111,7 @@
         if (n < data.length) {
             // console.log(data[n])
             renderPacking(data[n]);
-            setTimeout(function() { myLoop(n+1, data, finaliser); }, 1000);
+            setTimeout(function() { myLoop(n+1, data, finaliser); }, 500);
         } else {
             finaliser();
             console.log("finished animation");

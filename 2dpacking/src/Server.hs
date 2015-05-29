@@ -1,12 +1,15 @@
 {-# LANGUAGE OverloadedStrings, DeriveGeneric, ScopedTypeVariables, RecordWildCards #-}
 
 import GHC.Generics
+import Control.Monad
 import Control.Monad.IO.Class
 import Data.List
 import Data.Function
 import Debug.Trace
 
 import Web.Scotty
+
+import Control.Concurrent.ParallelIO.Global ( parallel )
 
 import Data.Aeson ( FromJSON(..), ToJSON(..), (.:), Value(..) )
 
@@ -70,12 +73,42 @@ main = scotty 3000 $ do
                             ]
         m <- runMinionBuilder (Model.model paramPrepped)
         -- liftIO $ print m
-        sols <- liftIO $ runMinion
-            -- [RandomiseOrder, FindAllSols, SolLimit 20]
-            [RandomiseOrder, CpuLimit 60]
-            -- [CpuLimit 60]
-            m
-            (\ xs -> do print (map snd xs) ; return xs )
+        let timePerMinion = 5
+        let nbRuns = 4
+        solss <- liftIO $ parallel $ flip map [1..nbRuns] $ \ i -> do
+                    let opts = if i == 0 then [CpuLimit timePerMinion]
+                                         else [CpuLimit timePerMinion, RandomiseOrder]
+                    putStrLn $ "Running Minion " ++ show i
+                    sols <- runMinion (show i) opts m
+                        -- [RandomiseOrder, FindAllSols, SolLimit 20]
+                        -- [RandomiseOrder, CpuLimit 10]
+                        -- [CpuLimit 60]
+                        (\ xs -> do putStrLn $ show i ++ " -- " ++ show (map snd xs)
+                                    return xs )
+                    if null sols
+                        then putStrLn $ "(" ++ show i ++ ") Finished with no solutions."
+                        else putStrLn $ "(" ++ show i ++ ") Finished with scrap: " ++ show (head (last sols))
+                    return sols
+
+        -- just all runs
+        -- let sols = concat solss
+
+        -- merging and sorting all runs, jumps back and forth too much in the animation
+        -- let sols = reverse
+        --                 $ nubBy  ((==)    `on` (snd . head))
+        --                 $ sortBy (compare `on` (snd . head))
+        --                 $ concat solss
+
+        -- picking the best run
+        let sols = snd                                      -- only keep the "run"
+                 $ head                                     -- pick the smallest lastScrap
+                 $ sortBy (compare `on` fst)
+                    [ (lastScrap, run)
+                    | run <- solss
+                    , not (null run)
+                    , let lastScrap = snd $ head $ last run
+                    ]
+
         if null sols
             then do
                 liftIO $ putStrLn "Sending all 0s"
@@ -85,14 +118,15 @@ main = scotty 3000 $ do
                                colourPerId
                       ]
             else do
-                liftIO $ putStrLn "Sending solutions"
+                liftIO $ putStrLn $ "Sending solutions: " ++ show (length sols)
+                liftIO $ putStrLn $ "With scrap       : " ++ show (head $ last sols)
                 -- let finalSol = chunk (snd packingDim) $ map snd (last sols)
                 -- liftIO $ putStrLn "Final solution"
                 -- liftIO $ mapM_ print finalSol
                 json $ Packings
                     [ Packing finalSol bitsPerId colourPerId
                     | sol <- sols
-                    , let finalSol = chunk (snd packingDim) $ map snd sol
+                    , let finalSol = chunk (snd packingDim) $ drop 1 $ map snd sol
                     ]
 
     get "/:filename" $ do
