@@ -22,7 +22,7 @@
     // 4x8x8
     var nbShapes = 5;
     var shapeDim = 8;
-    var packingDim = [10, 20];
+    var packingDim = [5, 10];
     var shapeColours = ["red", "MediumBlue", "green", "purple", "orange"];
     var shapes = new Array(nbShapes);
     var shouldResolve = false;
@@ -54,7 +54,7 @@
         for (i1 = 0; i1 < packingDim[0]; i1++) {
             for (j1 = 0; j1 < packingDim[1]; j1++) {
                 val = thePacking.packing[i1][j1];
-                $("#packing_"+(i1+1)+"_"+(j1+1)).html(thePacking.owners[i1][j1].toString());
+                // $("#packing_"+(i1+1)+"_"+(j1+1)).html(thePacking.owners[i1][j1].toString());
                 if (val != 0) {
                     thisShape = bitsPerId[val-1];
                     thisColour = perturbeColour(colourPerId[val-1]);
@@ -142,12 +142,13 @@
         // return $c.rgb2hex(r,g,b);
     }
 
-    function solve() {
+    function solve(isRandom) {
         solvingActive = true;
         $.post( "solve"
               , JSON.stringify({ pieces : shapes
                                , pieceColours : shapeColours
                                , packingDim : packingDim
+                               , isRandom : isRandom
                                })
               ).done(function(data){
                   console.log("animateRenderPacking!")
@@ -159,7 +160,7 @@
     function poll_resolve() {
         if (shouldResolve && !solvingActive) {
             shouldResolve = false;
-            solve();
+            solve(true);
         }
         setTimeout(poll_resolve, 5000);
     }
@@ -244,7 +245,7 @@
             }
         }
 
-        poll_resolve();
+        // poll_resolve();
 
     });
 
@@ -309,6 +310,8 @@
         <div class="row">
             <div class="col-xs-12">
                 <center>
+                    <button type="button" class="btn btn-default" onclick="solve(false)">Solve, Default Order</button>
+                    <button type="button" class="btn btn-default" onclick="solve(true)">Solve, Random Order</button>
                     <button type="button" class="btn btn-default" onclick="replay()">Replay</button>
                 </center>
             </div>

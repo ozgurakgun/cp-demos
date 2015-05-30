@@ -1,8 +1,15 @@
 
-#shapes td, #packing td {
+#shapes td {
     width: 20px;
     height: 20px;
     background-color: white;
+}
+
+#packing td {
+    width: 20px;
+    height: 20px;
+    background-color: white;
+    text-align: center;
 }
 
 #shapes td:hover {

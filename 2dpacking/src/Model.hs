@@ -86,10 +86,12 @@ model Params{..} = do
     postConstraint =<< sequence
         [ if all isJust allOwnedByThis
             then do
-                c1 <- reifyConstraint $ Cw_literal (topLeft (i,j)) (pieceID p)
-                c2 <- reifyConstraint $ Cwatched_and $ allOwnedByThisCons
-                                                    ++ nothingElseIsOwnedByThisCons
-                return $ Ceq c1 c2
+                aux <- varBool
+                return $ Cwatched_and
+                    [ Creify (Cw_literal (topLeft (i,j)) (pieceID p)) aux
+                    , Creify (Cwatched_and $ allOwnedByThisCons
+                                          ++ nothingElseIsOwnedByThisCons) aux
+                    ]
             else
                 -- this piece isn't a candidate
                 return $ Cw_notliteral (topLeft (i,j)) (pieceID p)
@@ -109,8 +111,12 @@ model Params{..} = do
                     , Just other `notElem` allOwnedByThis
                     ]
         , let allOwnedByThisCons =
-                    [ Cw_literal (owner (i2, j2)) (coordToInt (i,j))
+                    [ Cw_literal (owner   (i2, j2)) (coordToInt (i,j))
                     | Just (i2, j2) <- allOwnedByThis
+                    ] ++
+                    [ Cw_literal (topLeft (i2, j2)) 0
+                    | Just (i2, j2) <- allOwnedByThis
+                    , (i, j) /= (i2, j2)
                     ]
         , let nothingElseIsOwnedByThisCons =
                     [ Cw_notliteral (owner (i2, j2)) (coordToInt (i,j))

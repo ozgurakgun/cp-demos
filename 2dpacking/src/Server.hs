@@ -20,6 +20,7 @@ import Language.Minion
 data Shapes = Shapes { pieces :: [[[Bool]]]
                      , pieceColours :: [String]
                      , packingDim :: (Int, Int)
+                     , isRandom :: Bool
                      }
     deriving (Eq, Ord, Show, Generic)
 
@@ -75,9 +76,10 @@ main = scotty 3000 $ do
                             ]
         m <- runMinionBuilder (Model.model paramPrepped)
         -- liftIO $ print m
-        let timePerMinion = 5
-        let nbRuns = 0
-        solss <- liftIO $ parallel $ flip map [0..nbRuns] $ \ i -> do
+        let timePerMinion = 60
+        let nbRuns = 4
+        let iRuns = if isRandom then [1..nbRuns] else [0]
+        solss <- liftIO $ parallel $ flip map iRuns $ \ i -> do
                     let opts = if i == 0 then [CpuLimit timePerMinion]
                                          else [CpuLimit timePerMinion, RandomiseOrder]
                     putStrLn $ "Running Minion " ++ show i
@@ -115,14 +117,14 @@ main = scotty 3000 $ do
                 liftIO $ putStrLn "Sending all 0s"
                 json $ Packings bitsPerId colourPerId
                       [Packing [ [ 0
-                                 | i <- [1..fst packingDim]
+                                 | i <- [1..snd packingDim]
                                  ]
-                               | j <- [1..snd packingDim]
+                               | j <- [1..fst packingDim]
                                ]
                                [ [ 0
-                                 | i <- [1..fst packingDim]
+                                 | i <- [1..snd packingDim]
                                  ]
-                               | j <- [1..snd packingDim]
+                               | j <- [1..fst packingDim]
                                ]
                       ]
             else do
