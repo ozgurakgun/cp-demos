@@ -18,6 +18,9 @@
 
     <link rel="stylesheet" href="frontend.css">
 
+    <script type="text/javascript" src="local-js/lodash.js"></script>
+    <script type="text/javascript" src="local-js/local.js5"></script>
+    
     <script>
     // 4x8x8
     var nbShapes = 5;
@@ -152,6 +155,17 @@
                   lastPacking = data;
                   animateRenderPacking(0, data, function() { solvingActive = false });
               })
+    }
+    
+    function localsolve() {
+        solvingActive = true;
+        data = doLocalSearch({ pieces : shapes
+                         , pieceColours : shapeColours
+                         , packingDim : packingDim
+                         });
+        console.log("animateRenderPacking!")
+        lastPacking = data;
+        animateRenderPacking(0, data, function() { solvingActive = false });
     }
 
     function poll_resolve() {
@@ -309,6 +323,7 @@
                 <center>
                     <button type="button" class="btn btn-default" onclick="solve(false)">Solve, Default Order</button>
                     <button type="button" class="btn btn-default" onclick="solve(true)">Solve, Random Order</button>
+                    <button type="button" class="btn btn-default" onclick="localsolve(true)">Local Search Solver</button>
                     <button type="button" class="btn btn-default" onclick="replay()">Replay</button>
                 </center>
             </div>
