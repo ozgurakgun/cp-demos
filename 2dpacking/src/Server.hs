@@ -32,17 +32,35 @@ data Packing = Packing { packing :: [[Int]]
                        }
     deriving (Eq, Ord, Show, Generic)
 
-instance FromJSON Packing
-instance ToJSON Packing
-
 data Packings = Packings { bitsPerId :: [ [[Bool]] ]
                          , colourPerId :: [ String ]
                          , packings :: [Packing]
                          }
     deriving (Eq, Ord, Show, Generic)
 
-instance FromJSON Packings
-instance ToJSON Packings
+
+data PackingsJSON = PackingsJSON { newPacking :: [[PackingJSON]] }
+    deriving (Eq, Ord, Show, Generic)
+instance FromJSON PackingsJSON
+instance ToJSON PackingsJSON
+
+
+data PackingJSON = PackingJSON { x :: Int, y :: Int, shape :: [[Bool]], colour :: String }
+    deriving (Eq, Ord, Show, Generic)
+instance FromJSON PackingJSON
+instance ToJSON PackingJSON
+
+toNew :: Packings -> PackingsJSON
+toNew Packings{..} = PackingsJSON
+    [ [ PackingJSON{..}
+      | (x,row    ) <- zip [0..] (packing p)
+      , (y,shapeId) <- zip [0..] row
+      , let shape  = bitsPerId !! (shapeId-1)
+      , let colour = colourPerId !! (shapeId-1)
+      , shapeId /= 0
+      ]
+    | p <- packings
+    ]
 
 
 main :: IO ()
@@ -115,7 +133,7 @@ main = scotty 3000 $ do
         if null sols
             then do
                 liftIO $ putStrLn "Sending all 0s"
-                json $ Packings bitsPerId colourPerId
+                json $ toNew $ Packings bitsPerId colourPerId
                       [Packing [ [ 0
                                  | i <- [1..snd packingDim]
                                  ]
@@ -133,7 +151,7 @@ main = scotty 3000 $ do
                 -- let finalSol = chunk (snd packingDim) $ map snd (last sols)
                 -- liftIO $ putStrLn "Final solution"
                 -- liftIO $ mapM_ print finalSol
-                json $ Packings bitsPerId colourPerId
+                json $ toNew $ Packings bitsPerId colourPerId
                     [ Packing finalSol owners
                     | sol <- sols
                     , let finalSol = chunk (snd packingDim) $ take (fst packingDim * snd packingDim) $ drop 1 $ map snd sol
