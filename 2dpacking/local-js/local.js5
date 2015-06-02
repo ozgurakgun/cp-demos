@@ -1,5 +1,71 @@
 "use strict";
 
+function rotateAndCleanShapes(shapesIn, coloursIn) {
+	// First, rotate shapes
+	function rot90(a, x, y) {
+		return a[a.length - 1 - y][x];
+	}
+
+	var shapeList = [];
+	var colourList = [];
+	var shapeOld;
+	var shapeNew;
+	for (var i = 0; i < shapesIn.length; ++i) {
+		if (_.some(shapesIn[i], function (x) {
+			return _.some(x);
+		})) {
+			// filter empty shapes
+			shapeOld = shapesIn[i];
+			shapeList.push(shapeOld);
+			colourList.push(coloursIn[i]);
+			for (var j = 0; j < 3; ++j) {
+				shapeNew = _.map(_.range(shapeOld[0].length), function (x) {
+					return _.map(_.range(shapeOld.length), function (y) {
+						return rot90(shapeOld, x, y);
+					});
+				});
+				shapeList.push(shapeNew);
+				colourList.push(coloursIn[i]);
+				shapeOld = shapeNew;
+			}
+		}
+	}
+
+	for (var i = 0; i < shapeList.length; ++i) {
+		var s = shapeList[i];
+		console.log("In", s);
+		while (!_.some(_.first(s))) s = _.drop(s);
+		while (!_.some(_.last(s))) s = _.dropRight(s);
+		while (!_.some(_.map(s, function (x) {
+			return _.first(x);
+		}))) s = _.map(s, _.drop);
+		while (!_.some(_.map(s, function (x) {
+			return _.last(x);
+		}))) s = _.map(s, _.dropRight);
+		console.log("Out", s);
+		shapeList[i] = s;
+	}
+
+	var outlist = [];
+	var outcolourlist = [];
+
+	for (var i = 0; i < shapeList.length; ++i) {
+		var found = false;
+		for (var j = 0; j < outlist.length && found === false; ++j) {
+			if (_.isEqual(shapeList[i], outlist[j])) {
+				found = true;
+			}
+		}
+
+		if (!found) {
+			outlist.push(shapeList[i]);
+			outcolourlist.push(colourList[i]);
+		}
+	}
+
+	return { pieces: outlist, pieceColours: outcolourlist };
+}
+
 var local_log = function local_log() {};
 //let local_log = (...arg) => console.log(...arg)
 
@@ -83,10 +149,8 @@ var packLotsShape = function packLotsShape(grid, shapelist) {
 	var match = true;
 	var shapeids = [];
 	while (match) {
-		alert(grid);
 		match = false;
-		var i;
-		for (i = 0; i < shapelist.length; ++i) {
+		for (var i = 0; i < shapelist.length; ++i) {
 			retgrid = packShapes(grid, shapelist[i], shapeids.length + 1);
 			if (retgrid) {
 				shapecords.push(retgrid.location);
@@ -100,10 +164,18 @@ var packLotsShape = function packLotsShape(grid, shapelist) {
 	return { shapes: shapelist, grid: grid, shapecords: shapecords, shapeids: shapeids };
 };
 
+var packageSolution = function packageSolution(p, obj) {
+	return _.map(_.range(p.shapeids.length), function (i) {
+		return { x: p.shapecords[i][0], y: p.shapecords[i][1],
+			shape: obj.pieces[p.shapeids[i]],
+			colour: obj.pieceColours[p.shapeids[i]] };
+	});
+};
+
 var doLocalSearch = function doLocalSearch(obj) {
 	local_log("begin");
-	var pieceColours = obj.pieceColours;
-	var pieces = obj.pieces;
+
+	var rotated = rotateAndCleanShapes(obj.pieces, obj.pieceColours);
 
 	console.log(obj);
 	var blankgrid = _.times(obj.packingDim[0], function () {
@@ -112,31 +184,8 @@ var doLocalSearch = function doLocalSearch(obj) {
 		});
 	});
 
-	var p = packLotsShape(blankgrid, pieces);
-	local_log("end");
-	console.log(p);
-
-	var cornergrid = _.times(obj.packingDim[0], function () {
-		return _.times(obj.packingDim[1], function () {
-			return false;
-		});
-	});
-
-	for (var i = 0; i < p.shapecords.length; ++i) {
-		cornergrid[p.shapecords[i][0]][p.shapecords[i][1]] = i + 1;
-	}
-
-	console.log(p.grid);
-	console.log(cornergrid);
-	console.log("shapes", p.shapeids);
-	console.log("pieces", pieces);
-	console.log(_.map(p.shapeids, function (x) {
-		return pieces[x];
-	}));
-	return { packings: [{ packing: cornergrid }], bitsPerId: _.map(p.shapeids, function (x) {
-			return pieces[x];
-		}), colourPerId: _.map(p.shapeids, function (x) {
-			return pieceColours[x];
+	return { newPacking: _.times(20, function () {
+			var p = packLotsShape(blankgrid, rotated.pieces);return packageSolution(p, rotated);
 		}) };
 };
 
