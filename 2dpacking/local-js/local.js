@@ -2,6 +2,9 @@
 
 importScripts("lodash.js");
 
+
+var maxShapeDist = 8;
+
 function rotateAndCleanShapes(shapesIn, coloursIn) {
 	// First, rotate shapes
 	function rot90(a,x,y) {
@@ -30,7 +33,6 @@ function rotateAndCleanShapes(shapesIn, coloursIn) {
 	for(let i = 0; i < shapeList.length; ++i)
 	{
 		let s = shapeList[i];
-		console.log("In", s);
 		while(!(_.some(_.first(s))))
 			s = _.drop(s);
 		while(!(_.some(_.last(s))))
@@ -39,7 +41,6 @@ function rotateAndCleanShapes(shapesIn, coloursIn) {
 			s = _.map(s, _.drop);
 		while(!(_.some(_.map(s, (x) => _.last(x)))))
 			s = _.map(s, _.dropRight);
-		console.log("Out", s);
 		shapeList[i] = s;
 	}
 
@@ -59,6 +60,8 @@ function rotateAndCleanShapes(shapesIn, coloursIn) {
 			outcolourlist.push(colourList[i]);
 		}
 	}
+	
+	maxShapeDist = _.max(_.flattenDeep([_.map(outlist, (x) => x.length),_.map(outlist, (x)=>x[0].length)]));
 	
 	return { pieces: outlist, pieceColours : outcolourlist };
 }
@@ -92,20 +95,17 @@ var deref = function deref(array, x) {
 	throw new Error("Bad deref");
 };
 
-var addToGrid = function addToGrid(grid, shape, xoffset, yoffset, shapeid) {
+var addToGrid = function addToGrid(grid, shape, offset, shapeid) {
 	var result = _.cloneDeep(grid);
 	var i, j;
-	local_log(grid + "");
-	local_log(result + "");
 	for (i = 0; i < shape.length; ++i) {
 		for (j = 0; j < shape[i].length; ++j) {
 			if(shape[i][j] !== false) {
 				local_log(result + "");
-				local_log("Deep check: ", [i + xoffset, j + yoffset], deref(result, [i + xoffset, j + yoffset]));
-				if (deref(result, [i + xoffset, j + yoffset]) !== false) {
+				if (deref(result, [i + offset[0], j + offset[1]]) !== false) {
 					return false;
 				} else {
-					result[i + xoffset][j + yoffset] = shapeid;
+					result[i + offset[0]][j + offset[1]] = shapeid;
 				}
 			}
 		}
@@ -113,7 +113,24 @@ var addToGrid = function addToGrid(grid, shape, xoffset, yoffset, shapeid) {
 	return result;
 };
 
-var packShapes = function packShapes(grid, shape, shapeid) {
+var removeFromGrid = function removeFromGrid(grid, shape, offset, shapeid) {
+	var result = _.cloneDeep(grid);
+	var i, j;
+	for (i = 0; i < shape.length; ++i) {
+		for (j = 0; j < shape[i].length; ++j) {
+			if(shape[i][j] !== false) {
+				if(deref(result, [i + offset[0], j + offset[1]]) !== shapeid) {
+					console.log("Inconsistency!")
+					undefined[undefined]=undefined;
+				}
+				result[i+offset[0]][j+offset[1]] = false;
+			}
+		}
+	}
+	return result;
+};
+
+var packShapes = function packShapes(grid, piece, offset, shapeid) {
 	local_log("packShapes");
 	var result = _.cloneDeep(grid);
 	var placed = [];
@@ -124,40 +141,92 @@ var packShapes = function packShapes(grid, shape, shapeid) {
 	//local_log("Trying...", _.range(0-shape.length, grid.length+shape.length) , "!" ,
 	//					     0-shape[0].length  , grid[0].length+shape[0].length);
 
-	var places = cartesian(_.range(0 - shape.length, grid.length + shape.length), _.range(0 - shape[0].length, grid[0].length + shape[0].length));
+	//var places = cartesian(_.range(0 - shape.length, grid.length + shape.length), _.range(0 - shape[0].length, grid[0].length + shape[0].length));
 
-	places = _.shuffle(places);
+	//places = _.shuffle(places);
 	//local_log(places);
 	//local_log(shape);
 	//local_log(grid);
-	for (i = 0; i < _.size(places); ++i) {
-		local_log("Trying: ", places[i]);
-		retgrid = addToGrid(grid, shape, places[i][0], places[i][1], shapeid);
-		if (retgrid !== false) {
-			local_log("Success!");
-			return { grid: retgrid, location: places[i] };
-		}
+	//local_log("Trying: ", places[i]);
+	retgrid = addToGrid(grid, piece, offset, shapeid);
+	if (retgrid !== false) {
+		local_log("Success!");
+		return retgrid;
 	}
-	return false;
+return false;
 };
 
-var packLotsShape = function packLotsShape(grid, shapelist) {
+// tries to move shapes around to make more space
+var shuffleGrid = function(pkg) {
+	console.log("Try shuffle");
+	let moved = true;
+	while(moved)
+	{
+		moved = false;
+		for(let i = 0; i < pkg.shapecords.length; ++i)
+		{
+			let shape = pkg.shapes[pkg.shapeids[i]];
+			let coord = pkg.shapecords[i];
+			
+			let gridcpy = removeFromGrid(pkg.grid, shape, coord, i+1);
+			for(let j = coord[0] - 1; j >= -maxShapeDist; --j)
+			{
+				let moved = addToGrid(gridcpy, shape, [j, coord[1]], i+1);
+				if(moved !== false)
+				{
+					pkg.grid = moved;
+					pkg.shapecords[i] = [j, coord[1]];
+					moved = true;
+				}
+			}
+			
+			coord = pkg.shapecords[i];
+			
+			for(let j = coord[1] - 1; j >= -maxShapeDist; --j)
+			{
+				let moved = addToGrid(gridcpy, shape, [coord[0], j], i+1);
+				if(moved !== false)
+				{
+					pkg.grid = moved;
+					pkg.shapecords[i] = [coord[0], j];
+					moved = true;
+				}
+			}
+			
+		}
+		
+	}
+	return pkg;
+}
+
+
+var packLotsShape = function packLotsShape(obj) {
 	var retgrid;
-	var shapecords = [];
+	var shapecords = obj.shapecords;
 	var match = true;
-	var shapeids = [];
+	var shapeids = obj.shapeids;
+	var grid = obj.grid;
+	var shapelist = obj.shapes;
+	
 	while (match) {
 		match = false;
-		for (let i = 0; i < shapelist.length; ++i) {
-			retgrid = packShapes(grid, shapelist[i], shapeids.length + 1);
+		
+		var places = cartesian(_.range(0 - maxShapeDist, grid.length + maxShapeDist),
+							   _.range(0 - maxShapeDist, grid[0].length + maxShapeDist),
+							   _.range(shapelist.length)
+							  );
+		
+		places = _.shuffle(places);
+		
+		for (let i = 0; i < places.length; ++i) {
+			retgrid = packShapes(grid, shapelist[places[i][2]], [places[i][0], places[i][1]], shapeids.length + 1);
 			if (retgrid) {
-				shapecords.push(retgrid.location);
-				grid = retgrid.grid;
-				match = true;
-				shapeids.push(i);
+				shapecords.push([places[i][0], places[i][1]]);
+				grid = retgrid;
+				match = false;
+				shapeids.push(places[i][2]);
 			}
 		}
-		local_log(shapecords.length);
 	}
 	return { shapes: shapelist, grid: grid, shapecords: shapecords, shapeids : shapeids };
 };
@@ -168,6 +237,11 @@ var packageSolution = function(p, obj) {
 													  colour: obj.pieceColours[p.shapeids[i]]}));
 }
 
+var makeEmptyGrid = function(obj, rotated) {
+	var blankgrid = _.times(obj.packingDim[0],() => _.times(obj.packingDim[1], () => false));
+	return { shapes: rotated.pieces, grid: blankgrid, shapecords: [], shapeids: [] };
+}
+
 onmessage = function(message)
 {
 	let obj = message.data;
@@ -175,18 +249,24 @@ onmessage = function(message)
 
 	let rotated = rotateAndCleanShapes(obj.pieces, obj.pieceColours);
 	
-	console.log(obj)
-	var blankgrid = _.times(obj.packingDim[0],() => _.times(obj.packingDim[1], () => false));
+	console.log(obj, rotated);
+	
+	//var blankgrid = makeEmptyGrid(obj, rotated);
+	//var blankgrid = _.times(obj.packingDim[0],() => _.times(obj.packingDim[1], () => false));
 
 	let bestresult = 0;
 	let bestgrid = undefined;
-	for(let i = 0; i < 1000000; i++) {
-		let p = packLotsShape(blankgrid, rotated.pieces);
+	for(let i = 0; i < 10000; i++) {
+		let blankgrid = makeEmptyGrid(obj, rotated);
+		let p = packLotsShape(shuffleGrid(packLotsShape(blankgrid)));
+		//let p = packLotsShape(blankgrid);
 		let count = _.sum(_.map(p.grid, (x) => _.sum(_.map(x,(y)=>y!==false))));
+		console.log(count);
 		if(count > bestresult) {
 			bestresult = count;
 			bestgrid = p;
 			postMessage({newPacking: [packageSolution(p, rotated)]});
+			//undefined[undefined]=undefined
 		}
 	}
 	//postMessage({ newPacking : _.times(20, () => { let p = packLotsShape(blankgrid, rotated.pieces); return packageSolution(p,rotated)} )});
