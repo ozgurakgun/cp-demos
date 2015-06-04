@@ -1,5 +1,7 @@
 "use strict";
 
+importScripts("lodash.js");
+
 function rotateAndCleanShapes(shapesIn, coloursIn) {
 	// First, rotate shapes
 	function rot90(a, x, y) {
@@ -172,7 +174,8 @@ var packageSolution = function packageSolution(p, obj) {
 	});
 };
 
-var doLocalSearch = function doLocalSearch(obj) {
+onmessage = function (message) {
+	var obj = message.data;
 	local_log("begin");
 
 	var rotated = rotateAndCleanShapes(obj.pieces, obj.pieceColours);
@@ -184,8 +187,21 @@ var doLocalSearch = function doLocalSearch(obj) {
 		});
 	});
 
-	return { newPacking: _.times(20, function () {
-			var p = packLotsShape(blankgrid, rotated.pieces);return packageSolution(p, rotated);
-		}) };
+	var bestresult = 0;
+	var bestgrid = undefined;
+	for (var i = 0; i < 100000; i++) {
+		var p = packLotsShape(blankgrid, rotated.pieces);
+		var count = _.sum(_.map(p.grid, function (x) {
+			return _.sum(_.map(x, function (y) {
+				return y !== false;
+			}));
+		}));
+		if (count > bestresult) {
+			bestresult = count;
+			bestgrid = p;
+			postMessage({ newPacking: [packageSolution(p, rotated)] });
+		}
+	}
+	//postMessage({ newPacking : _.times(20, () => { let p = packLotsShape(blankgrid, rotated.pieces); return packageSolution(p,rotated)} )});
 };
 

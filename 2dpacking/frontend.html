@@ -17,9 +17,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
 
     <link rel="stylesheet" href="frontend.css">
-
-    <script type="text/javascript" src="local-js/lodash.js"></script>
-    <script type="text/javascript" src="local-js/local.js5"></script>
     
     <script>
     // 4x8x8
@@ -159,15 +156,26 @@
               })
     }
     
-    function localsolve() {
+    var myWorker = undefined;
+    var continousLocal = false;
+    
+    function localsolve(continous) {
+        continousLocal = continous;
         solvingActive = true;
-        data = doLocalSearch({ pieces : shapes
+        if(myWorker !== undefined)
+            myWorker.terminate();
+        myWorker = new Worker("local-js/local.js5");
+        
+        myWorker.onmessage = function(message) {
+            animateRenderPacking(0, message.data, function() { solvingActive = false });
+            lastPacking = message.data;
+        };
+        
+        myWorker.postMessage({ pieces : shapes
                          , pieceColours : shapeColours
                          , packingDim : packingDim
                          });
-        console.log("animateRenderPacking!")
-        lastPacking = data;
-        animateRenderPacking(0, data, function() { solvingActive = false });
+        
     }
 
     function poll_resolve() {
@@ -200,6 +208,8 @@
                 return false;
             }
             renderShapes();
+            if(continousLocal)
+                localsolve(continousLocal);
             shouldResolve = true;
             return false;
         };
@@ -325,7 +335,8 @@
                 <center>
                     <button type="button" class="btn btn-default" onclick="solve(false)">Solve, Default Order</button>
                     <button type="button" class="btn btn-default" onclick="solve(true)">Solve, Random Order</button>
-                    <button type="button" class="btn btn-default" onclick="localsolve(true)">Local Search Solver</button>
+                    <button type="button" class="btn btn-default" onclick="localsolve(false)">Local Search Solver</button>
+                    <button type="button" class="btn btn-default" onclick="localsolve(true)">Continous Local Search</button>
                     <button type="button" class="btn btn-default" onclick="replay()">Replay</button>
                 </center>
             </div>

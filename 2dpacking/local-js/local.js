@@ -1,6 +1,6 @@
 "use strict";
 
-
+importScripts("lodash.js");
 
 function rotateAndCleanShapes(shapesIn, coloursIn) {
 	// First, rotate shapes
@@ -168,8 +168,9 @@ var packageSolution = function(p, obj) {
 													  colour: obj.pieceColours[p.shapeids[i]]}));
 }
 
-var doLocalSearch = function(obj)
+onmessage = function(message)
 {
+	let obj = message.data;
 	local_log("begin");
 
 	let rotated = rotateAndCleanShapes(obj.pieces, obj.pieceColours);
@@ -177,5 +178,16 @@ var doLocalSearch = function(obj)
 	console.log(obj)
 	var blankgrid = _.times(obj.packingDim[0],() => _.times(obj.packingDim[1], () => false));
 
-	return { newPacking : _.times(20, () => { let p = packLotsShape(blankgrid, rotated.pieces); return packageSolution(p,rotated)} )}
+	let bestresult = 0;
+	let bestgrid = undefined;
+	for(let i = 0; i < 1000000; i++) {
+		let p = packLotsShape(blankgrid, rotated.pieces);
+		let count = _.sum(_.map(p.grid, (x) => _.sum(_.map(x,(y)=>y!==false))));
+		if(count > bestresult) {
+			bestresult = count;
+			bestgrid = p;
+			postMessage({newPacking: [packageSolution(p, rotated)]});
+		}
+	}
+	//postMessage({ newPacking : _.times(20, () => { let p = packLotsShape(blankgrid, rotated.pieces); return packageSolution(p,rotated)} )});
 }
