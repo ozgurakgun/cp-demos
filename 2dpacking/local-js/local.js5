@@ -54,7 +54,7 @@ function rotateAndCleanShapes(shapesIn, coloursIn) {
 	for (var i = 0; i < shapeList.length; ++i) {
 		var found = false;
 		for (var j = 0; j < outlist.length && found === false; ++j) {
-			if (_.isEqual(shapeList[i], outlist[j])) {
+			if (_.isEqual(shapeList[i], outlist[j]) && _.isEqual(colourList[i], colourList[j])) {
 				found = true;
 			}
 		}
@@ -254,7 +254,12 @@ var doLoop = function doLoop() {
 	var bestgrid = state.bestgrid;
 
 	var blankgrid = makeEmptyGrid(obj, rotated);
-	var p = packLotsShape(shuffleGrid(packLotsShape(blankgrid)));
+	var pold = packLotsShape(blankgrid);
+	var p = packLotsShape(shuffleGrid(pold));
+	while (!_.isEqual(pold.grid, p.grid)) {
+		pold = p;
+		p = packLotsShape(shuffleGrid(pold));
+	}
 	//let p = packLotsShape(blankgrid);
 	var count = _.sum(_.map(p.grid, function (x) {
 		return _.sum(_.map(x, function (y) {

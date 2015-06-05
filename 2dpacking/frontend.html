@@ -159,7 +159,7 @@
     var myWorker = undefined;
     var continousLocal = false;
     
-    funchg pution localsolve(continous) {
+    function localsolve(continous) {
         continousLocal = continous;
         solvingActive = true;
         if(myWorker === undefined) {
@@ -336,7 +336,7 @@
                     <button type="button" class="btn btn-default" onclick="solve(false)">Solve, Default Order</button>
                     <button type="button" class="btn btn-default" onclick="solve(true)">Solve, Random Order</button>
                     <button type="button" class="btn btn-default" onclick="localsolve(false)">Local Search Solver</button>
-                    <button type="button" class="btn btn-default" onclick="localsolve(true)">Continous Local Search</button>
+                    <button type="button" class="btn btn-default" onclick="localsolve(true)">Continuous Local Search</button>
                     <button type="button" class="btn btn-default" onclick="replay()">Replay</button>
                 </center>
             </div>
