@@ -242,6 +242,36 @@ var makeEmptyGrid = function(obj, rotated) {
 	return { shapes: rotated.pieces, grid: blankgrid, shapecords: [], shapeids: [] };
 }
 
+
+// state is stored globally so it can be overwritten by onmessage
+var state = {};
+
+var doLoop = function() {
+	let obj = state.obj;
+	let rotated = state.rotated;
+	
+	let bestresult = state.bestresult;
+	let bestgrid = state.bestgrid;
+
+	let blankgrid = makeEmptyGrid(obj, rotated);
+	let p = packLotsShape(shuffleGrid(packLotsShape(blankgrid)));
+	//let p = packLotsShape(blankgrid);
+	let count = _.sum(_.map(p.grid, (x) => _.sum(_.map(x,(y)=>y!==false))));
+	console.log(count, bestresult);
+	if(count > bestresult) {
+		bestresult = count;
+		bestgrid = p;
+		postMessage({newPacking: [packageSolution(p, rotated)]});
+		//undefined[undefined]=undefined
+	}
+	
+	state.bestresult = bestresult;
+	state.bestgrid = bestgrid;
+	state.count = state.count + 1;
+	if(state.count < 10000)
+		setTimeout( doLoop, 0);
+}
+
 onmessage = function(message)
 {
 	let obj = message.data;
@@ -254,20 +284,8 @@ onmessage = function(message)
 	//var blankgrid = makeEmptyGrid(obj, rotated);
 	//var blankgrid = _.times(obj.packingDim[0],() => _.times(obj.packingDim[1], () => false));
 
-	let bestresult = 0;
-	let bestgrid = undefined;
-	for(let i = 0; i < 10000; i++) {
-		let blankgrid = makeEmptyGrid(obj, rotated);
-		let p = packLotsShape(shuffleGrid(packLotsShape(blankgrid)));
-		//let p = packLotsShape(blankgrid);
-		let count = _.sum(_.map(p.grid, (x) => _.sum(_.map(x,(y)=>y!==false))));
-		console.log(count);
-		if(count > bestresult) {
-			bestresult = count;
-			bestgrid = p;
-			postMessage({newPacking: [packageSolution(p, rotated)]});
-			//undefined[undefined]=undefined
-		}
-	}
+	state = {obj: obj, rotated: rotated, bestresult: 0, bestgrid: undefined, count: 0};
+	setTimeout( doLoop, 1);
+
 	//postMessage({ newPacking : _.times(20, () => { let p = packLotsShape(blankgrid, rotated.pieces); return packageSolution(p,rotated)} )});
 }

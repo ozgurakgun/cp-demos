@@ -159,17 +159,17 @@
     var myWorker = undefined;
     var continousLocal = false;
     
-    function localsolve(continous) {
+    funchg pution localsolve(continous) {
         continousLocal = continous;
         solvingActive = true;
-        if(myWorker !== undefined)
-            myWorker.terminate();
-        myWorker = new Worker("local-js/local.js5");
+        if(myWorker === undefined) {
+            myWorker = new Worker("local-js/local.js5");
         
-        myWorker.onmessage = function(message) {
-            animateRenderPacking(0, message.data, function() { solvingActive = false });
-            lastPacking = message.data;
-        };
+            myWorker.onmessage = function(message) {
+                renderPacking(message.data.newPacking[0]);
+                lastPacking = message.data;
+            };
+        }
         
         myWorker.postMessage({ pieces : shapes
                          , pieceColours : shapeColours
