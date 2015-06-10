@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html>
+
+<!-- https://github.com/gleitz/midi-js-soundfonts -->
+<!-- https://github.com/mudcube/MIDI.js/issues/63 -->
+
+<head>
+	<meta http-equiv="content-type" content="text/html; charset=utf-8" />
+	<!-- polyfill -->
+	<script src="MIDI.js-master/inc/shim/Base64.js" type="text/javascript"></script>
+	<script src="MIDI.js-master/inc/shim/Base64binary.js" type="text/javascript"></script>
+	<script src="MIDI.js-master/inc/shim/WebAudioAPI.js" type="text/javascript"></script>
+	<!-- midi.js package -->
+	<script src="MIDI.js-master/js/midi/audioDetect.js" type="text/javascript"></script>
+	<script src="MIDI.js-master/js/midi/gm.js" type="text/javascript"></script>
+	<script src="MIDI.js-master/js/midi/loader.js" type="text/javascript"></script>
+	<script src="MIDI.js-master/js/midi/plugin.audiotag.js" type="text/javascript"></script>
+	<script src="MIDI.js-master/js/midi/plugin.webaudio.js" type="text/javascript"></script>
+	<script src="MIDI.js-master/js/midi/plugin.webmidi.js" type="text/javascript"></script>
+	<!-- utils -->
+	<script src="MIDI.js-master/js/util/dom_request_xhr.js" type="text/javascript"></script>
+	<script src="MIDI.js-master/js/util/dom_request_script.js" type="text/javascript"></script>
+	<!-- include the soundfont directly to avoid cross origin errors-->
+	<script src="./soundfont/acoustic_grand_piano-mp3.js"></script>
+	<!--<script src="./midi-js-soundfonts-master/FluidR3_GM/marimba-ogg.js"></script>-->
+</head>	
+	
+<body>
+
+<p>
+ <label>
+  <input type="checkbox"
+         id = "DistinctPitchClassesCheckBox"
+         onclick="handleCheck(this);">
+  Require Distinct Pitch Classes
+ </label>
+</p>
+
+<p>
+ <label>
+  <input type="checkbox"
+         id = "DistinctIntervalsCheckBox"
+         onclick="handleCheck(this);">
+  Require Distinct Intervals
+ </label>
+</p>
+
+<!-- Yes, these should be radio buttons... -->
+<p>
+ <label>
+  <input type="checkbox"
+         id = "OddIntervalsCheckBox"
+         onclick="handleCheck(this);">
+  Require Odd Intervals
+ </label>
+ <label>
+  <input type="checkbox"
+         id = "EvenIntervalsCheckBox"
+         onclick="handleCheck(this);">
+  Require Even Intervals
+ </label>
+ <label>
+  <input type="checkbox"
+         id = "AlternatingIntervalsCheckBox"
+         onclick="handleCheck(this);">
+  Require Alternating Intervals
+ </label> 
+</p>
+
+<button type="button" onclick=solve()>
+  Find Next Solution
+</button>
+
+<button type="button" onclick=reset()>
+  Reset
+</button>
+
+<button type="button" onclick=play()>
+  Play (Random Rhythm)
+</button>
+
+<p id="Output"></p>
+
+<canvas id="scoreCanvas" width="1000" height="500">
+This text is displayed if your browser does not support HTML5 Canvas.
+</canvas>
+
+<script>
+window.onload = function () {
+	MIDI.loadPlugin({
+		instrument: "acoustic_grand_piano",
+	});
+};
+</script>
+
+<script>
+// other ideas: even intervals, alternating intervals
+
+// Some "constants"
+var NO_NOTES = 7 ;
+var NOTE_OFFSET = 60 ; // This is C3
+
+// flags to control constraints
+var distinctPitchClassesFlag = false ;
+var distinctIntervalsFlag = false ;
+var oddIntervalsFlag = false ;
+var evenIntervalsFlag = false ;
+var alternatingIntervalsFlag = false ;
+
+// Global variables capture state 
+// Need to do this with a closure:
+//   http://www.w3schools.com/js/js_function_closures.asp
+var values = 
+  [0, 2, 4, 5, 7, 9, 11, 12, 14, 16, 17, 19, 21, 23] ;
+var noteNames = 
+  ["C3","C#3","D3","D#3","E3","F3","F#3","G3","G#3","A3","A#3","B3",
+   "C4","C#4","D4","D#4","E4","F4","F#4","G4","G#4","A4","A#4","B4"] ;
+var durations = 
+  [0.25, 0.5, 0.75, 1] ;
+var notes = [] ;
+var backtracking = false ;
+
+function handleCheck(checkBox) {
+  // Should be a switch statement...
+  if (checkBox.id == "DistinctPitchClassesCheckBox")
+    distinctPitchClassesFlag = checkBox.checked ;
+  else if (checkBox.id == "DistinctIntervalsCheckBox")
+    distinctIntervalsFlag = checkBox.checked ;
+  else if (checkBox.id == "OddIntervalsCheckBox") {
+    oddIntervalsFlag = checkBox.checked ;
+    if (oddIntervalsFlag) {
+      document.getElementById("EvenIntervalsCheckBox").disabled = true;
+      document.getElementById("AlternatingIntervalsCheckBox").disabled = true;      
+    }
+    else {
+      document.getElementById("EvenIntervalsCheckBox").disabled = false;
+      document.getElementById("AlternatingIntervalsCheckBox").disabled = false;
+    }
+  }
+  else if (checkBox.id == "EvenIntervalsCheckBox") {
+    evenIntervalsFlag = checkBox.checked ;
+    if (evenIntervalsFlag) {
+      document.getElementById("OddIntervalsCheckBox").disabled = true;
+      document.getElementById("AlternatingIntervalsCheckBox").disabled = true;
+    }
+    else {
+      document.getElementById("OddIntervalsCheckBox").disabled = false;
+      document.getElementById("AlternatingIntervalsCheckBox").disabled = false;      
+    }
+  }
+  else if (checkBox.id == "AlternatingIntervalsCheckBox") {
+    alternatingIntervalsFlag = checkBox.checked ;
+    if (alternatingIntervalsFlag) {
+      document.getElementById("EvenIntervalsCheckBox").disabled = true;
+      document.getElementById("OddIntervalsCheckBox").disabled = true;
+    }
+    else {
+      document.getElementById("EvenIntervalsCheckBox").disabled = false;
+      document.getElementById("OddIntervalsCheckBox").disabled = false;       
+    }
+  }
+}
+
+function play() {
+  if (notes.length == 0) {
+    document.getElementById("Output").innerHTML = 
+      "Find a sequence to play first";
+    return ; 
+  }
+  // Play each note in the solution
+  MIDI.setVolume(0, 127); 
+  var velocity = 127; // how hard the note hits  
+  var time = 0 ;
+  for (var i = 0; i < notes.length; i++) {
+    MIDI.noteOn(0, notes[i]+NOTE_OFFSET, velocity, time);
+    MIDI.noteOff(0, notes[i]+NOTE_OFFSET, time + 0.75);
+    time+= durations[Math.floor(Math.random()*durations.length)] ;
+  }
+}
+
+function checkDistinctPitchClasses(noteIndex) {
+  if (!distinctPitchClassesFlag)
+    return true ;
+  for (var i = 0; i < noteIndex; i++) {
+    if ((notes[i] == notes[noteIndex]) ||
+        (Math.abs(notes[i] - notes[noteIndex]) == 12)) {
+      return false ;
+    }
+  }
+  return true ;
+}
+
+function checkDistinctIntervals(noteIndex) {
+  if (!distinctIntervalsFlag)
+    return true ;
+  if (noteIndex <= 1) return true ;
+  var newInterval = Math.abs(notes[noteIndex] - notes[noteIndex-1]) ;
+  for (var i = 0; i < noteIndex-1; i++) {
+    if (newInterval == Math.abs(notes[i] - notes[i+1]))
+      return false ;
+  }
+  return true ;
+}
+
+// obviously wasteful to have both of these. Move flag check out
+function checkOddIntervals(noteIndex) {
+  if (!oddIntervalsFlag)
+    return true ;
+  if (noteIndex == 0) return true ;
+  return (((notes[noteIndex] - notes[noteIndex-1]) % 2) != 0) ;
+}
+function checkEvenIntervals(noteIndex) {
+  if (!evenIntervalsFlag)
+    return true ;
+  if (noteIndex == 0) return true ;
+  return (((notes[noteIndex] - notes[noteIndex-1]) % 2) == 0) ;
+}
+function checkAlternatingIntervals(noteIndex) {
+  if (!alternatingIntervalsFlag)
+    return true ;
+  // Need at least two intervals to activate
+  if (noteIndex <= 1) return true ;
+  var isPrevIntervalEven = (((notes[noteIndex-1] - notes[noteIndex-2]) % 2) == 0) ;
+  var isNewIntervalEven = (((notes[noteIndex] - notes[noteIndex-1]) % 2) == 0) ;
+  return isPrevIntervalEven != isNewIntervalEven ;
+}
+   
+function displaySolution() {
+  var solution = "" ;
+  for (var i = 0; i < notes.length; i++) {
+    if (i > 0) 
+      solution += (notes[i] - notes[i-1]) + " " ;
+    solution += noteNames[notes[i]] + " " ;
+  }
+  document.getElementById("Output").innerHTML = solution ;
+  // now render score
+  var c=document.getElementById("scoreCanvas");  
+  var ctx=c.getContext("2d");
+  ctx.clearRect(0, 0, c.width, c.height);  
+  for (var i = 1; i <= 5; i++) {
+    ctx.beginPath();
+    ctx.moveTo(0,10*i);
+    ctx.lineTo(500,10*i);
+    ctx.stroke();
+  }
+  for (i = 0; i < notes.length; i++) {
+    for (var valIndex = 0; valIndex < values.length; valIndex++) {
+      if (notes[i] == values[valIndex])
+        break ;
+    }
+    drawEllipseByCenter(ctx, 60*(i+1),60-5*(valIndex),20,10);
+  }
+}
+
+// code from: http://stackoverflow.com/questions/2172798/how-to-draw-an-oval-in-html5-canvas
+function drawEllipseByCenter(ctx, cx, cy, w, h) {
+  drawEllipse(ctx, cx - w/2.0, cy - h/2.0, w, h);
+}
+
+function drawEllipse(ctx, x, y, w, h) {
+  var kappa = .5522848,
+      ox = (w / 2) * kappa, // control point offset horizontal
+      oy = (h / 2) * kappa, // control point offset vertical
+      xe = x + w,           // x-end
+      ye = y + h,           // y-end
+      xm = x + w / 2,       // x-middle
+      ym = y + h / 2;       // y-middle
+
+  ctx.beginPath();
+  ctx.moveTo(x, ym);
+  ctx.bezierCurveTo(x, ym - oy, xm - ox, y, xm, y);
+  ctx.bezierCurveTo(xm + ox, y, xe, ym - oy, xe, ym);
+  ctx.bezierCurveTo(xe, ym + oy, xm + ox, ye, xm, ye);
+  ctx.bezierCurveTo(xm - ox, ye, x, ym + oy, x, ym);
+  ctx.fill();
+}
+
+function solveR(noteIndex) {
+  if (noteIndex == NO_NOTES) {
+    //console.log("Solution: "+notes) ;
+    displaySolution() ;
+    backtracking = false ;
+    return true;
+  }
+  //console.log("Assigning: "+noteIndex) ;
+  
+  // This variable indexes the values array 
+  var i = 0 ;
+  // If we have begun backtracking want to examine all values.
+  // Otherwise, is there an incumbent solution?
+  if (!backtracking && (notes[noteIndex] != undefined)) {
+    for (; i < values.length; i++) {
+      if (values[i] == notes[noteIndex]) {
+        // if this is the last note, need to increment i for lex next sol
+        if (noteIndex == NO_NOTES-1)
+          i++ ;
+        break ;
+      }
+    }
+  }
+  //console.log("i = "+i) ;
+  
+  // Focus on C3-C4 for now
+  for (; i < 8; i++) {
+    //console.log(noteIndex+" = "+values[i]) ;
+    notes[noteIndex] = values[i] ;
+    //console.log(">"+notes) ;
+    if (checkDistinctPitchClasses(noteIndex) &&
+        checkDistinctIntervals(noteIndex) &&
+        checkOddIntervals(noteIndex) &&
+        checkEvenIntervals(noteIndex) &&
+        checkAlternatingIntervals(noteIndex)) 
+    {
+      if (solveR(noteIndex+1))
+        return true ;
+    }
+  }
+  //console.log("Backtracking") ;
+  if (!backtracking) backtracking = true ;
+  return false ;
+}
+   
+function solve() {
+  if(!solveR(0)) {
+    document.getElementById("Output").innerHTML = "No More Solutions";
+    // if we take this out, it will start again.
+    backtracking = false ;
+  }
+}
+
+function reset() {
+  notes = [] ;
+  document.getElementById("Output").innerHTML = "";
+}
+
+</script>
+
+</body>
+</html>
