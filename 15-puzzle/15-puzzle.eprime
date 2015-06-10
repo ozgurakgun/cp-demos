@@ -1,0 +1,71 @@
+language ESSENCE' 1.0
+
+letting xDim be 2
+letting yDim be 2
+letting nbPieces be (xDim * yDim) - 1
+letting maxNumMoves be 100
+
+letting DIMX  be domain int(1..xDim)
+letting DIMY  be domain int(1..yDim)
+letting PIECE be domain int(0..nbPieces)           $ 0 is the empty piece
+letting SEQ   be domain int(0..maxNumMoves)
+letting MOVE  be domain int(1,2,3,4)                $ top, right, bottom, left
+
+$ given init : matrix indexed by [DIMX, DIMY] of PIECE
+find nbMoves     : SEQ
+find moves       : matrix indexed by [SEQ] of MOVE
+find holeX       : matrix indexed by [SEQ] of DIMX
+find holeY       : matrix indexed by [SEQ] of DIMY
+find boards      : matrix indexed by [SEQ, DIMX, DIMY] of PIECE
+
+$ letting init be [ [1,2]
+$                 , [0,3]
+$                 ]
+$ letting init be [ [0,2]
+$                 , [1,3]
+$                 ]
+$ letting init be [ [2,0]
+$                 , [1,3]
+$                 ]
+letting init be [ [2,3]
+                , [1,0]
+                ]
+
+branching on [ nbMoves, moves, holeX, holeY ]
+
+minimising nbMoves
+
+such that
+
+    $ fix unused holes and moves
+    forAll i : SEQ . i > nbMoves -> (holeX[i]=1 /\ holeY[i]=1 /\ moves[i] = 1),
+    forAll i : SEQ . i <= nbMoves ->                    $ all valid steps
+        allDiff(flatten(boards[i,..,..])),
+
+    $ connect the hole to the boards
+    forAll i : SEQ . i <= nbMoves ->                    $ all valid steps
+        boards[i, holeX[i], holeY[i]] = 0,
+
+    $ init and last boards
+    forAll x : DIMX . forAll y : DIMY . boards[0      ,x,y] = init[x,y],
+    forAll x : DIMX . forAll y : DIMY . boards[nbMoves,x,y] = (1+(x-1) * yDim + (y-1)) % (nbPieces+1),
+
+    $ state transition for the hole
+    forAll i : SEQ . i < nbMoves ->                     $ all valid steps, except the last one
+        (moves[i]=1 /\ holeX[i]=holeX[i+1] /\ holeY[i]-1=holeY[i+1]) \/
+        (moves[i]=3 /\ holeX[i]=holeX[i+1] /\ holeY[i]+1=holeY[i+1]) \/
+        (moves[i]=2 /\ holeX[i]+1=holeX[i+1] /\ holeY[i]=holeY[i+1]) \/
+        (moves[i]=4 /\ holeX[i]-1=holeX[i+1] /\ holeY[i]=holeY[i+1]),
+
+    $ state transition for the boards
+    forAll i : SEQ . i < nbMoves ->                     $ all valid steps, except the last one
+        boards[i+1, holeX[i], holeY[i]] =               $ the next hole
+        boards[i, holeX[i+1], holeY[i+1]],              $ then here should be what will be in the hole next
+
+    forAll i : SEQ . i < nbMoves ->                     $ all valid steps, except the last one
+        forAll x : DIMX . forAll y : DIMY .
+        (x=holeX[i] /\ y = holeY[i]) \/                 $ either this is the current hole
+        (x=holeX[i+1] /\ y = holeY[i+1]) \/             $ or the next hole
+        boards[i+1,x,y] = boards[i,x,y],                $ or didn't change
+
+    true
