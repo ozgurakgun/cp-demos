@@ -14,7 +14,7 @@ executable demo-2dpacking
 
 executable demo-2dpacking-server
   main-is:             Server.hs
-  build-depends:       base, minion-hs, scotty==0.9.1, transformers, aeson, safe==0.3.9, parallel-io
+  build-depends:       base, minion-hs, scotty>=0.9.1, transformers, aeson, safe>=0.3.9, parallel-io
   hs-source-dirs:      src
   default-language:    Haskell2010
   ghc-options:         -threaded

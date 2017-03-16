@@ -1,8 +1,9 @@
 .PHONY: build clean
 
 build:
+	# ghc_version 8.0.2
 	cabal sandbox init
-	cabal sandbox add-source ~/repos/stacs_cp/minion-hs
+	cabal sandbox add-source ~/repos/github/minion-hs
 	cabal install --dependencies-only
 	cabal build
 
