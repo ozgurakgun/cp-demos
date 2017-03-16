@@ -95,7 +95,7 @@ main = scotty 3000 $ do
         m <- runMinionBuilder (Model.model paramPrepped)
         -- liftIO $ print m
         let timePerMinion = 60
-        let nbRuns = 4
+        let nbRuns = 6
         let iRuns = if isRandom then [1..nbRuns] else [0]
         solss <- liftIO $ parallel $ flip map iRuns $ \ i -> do
                     let opts = if i == 0 then [CpuLimit timePerMinion]
@@ -162,6 +162,11 @@ main = scotty 3000 $ do
         filename <- param "filename"
         liftIO $ putStrLn $ "serving " ++ filename
         file filename
+    get "/:dir/:filename" $ do
+        dir      <- param "dir"
+        filename <- param "filename"
+        liftIO $ putStrLn $ "serving " ++ (dir ++ "/" ++ filename)
+        file (dir ++ "/" ++ filename)
 
 chunk :: Int -> [a] -> [[a]]
 chunk n xs | length xs <= n = [xs]
