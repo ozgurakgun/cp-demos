@@ -1,0 +1,74 @@
+{
+    "umodules": {
+        "CS1002": {
+            "id": "CS1002",
+            "studentNo": 1,
+            "activities": [
+                "Lecture",
+                "Exercise"
+            ]
+        }
+    },
+    "activities": {
+        "CS1002": {
+            "activityModule": "CS1002",
+            "activity": "Lecture",
+            "duration": "1",
+            "days": {
+                "monday": true,
+                "tuesday": true,
+                "wednesday": false,
+                "thursday": false,
+                "friday": false,
+                "saturday": false,
+                "sunday": false
+            }
+        }
+    },
+    "lecturers": {
+        "name": "Lim",
+        "unavailable": {
+            "module": "CS1002",
+            "time": {
+                "monday": {
+                    "start": "2023-01-26T09:00:00.000Z",
+                    "end": "2023-01-26T10:00:00.000Z"
+                },
+                "tuesday": {
+                    "start": "2023-01-26T09:00:00.000Z",
+                    "end": "2023-01-26T10:00:00.000Z"
+                }
+            }
+        },
+        "preference": {
+            "module": "CS1002",
+            "activity": "Exercise",
+            "time": {
+                "tuesday": {
+                    "start": "2023-01-26T09:00:00.000Z",
+                    "end": "2023-01-26T10:00:00.000Z"
+                },
+                "wednesday": {
+                    "start": "2023-01-26T09:00:00.000Z",
+                    "end": "2023-01-26T10:00:00.000Z"
+                }
+            }
+        }
+    },
+    "rooms": {
+        "id": "JC123",
+        "capacity": 1,
+        "unavailable": {
+            "time": {
+                "monday": {
+                    "start": "2023-01-26T09:00:00.000Z",
+                    "end": "2023-01-26T10:00:00.000Z"
+                },
+                "tuesday": {
+                    "start": "2023-01-26T09:00:00.000Z",
+                    "end": "2023-01-26T10:00:00.000Z"
+                }
+            }
+        }
+    }
+}

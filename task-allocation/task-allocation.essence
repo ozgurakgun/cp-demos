@@ -1,0 +1,66 @@
+language Essence 1.3
+
+given nb_tasks: int
+given nb_users: int
+given nb_categories: int
+
+letting TASK be domain int(1..nb_tasks)
+letting USER be domain int(1..nb_users)
+letting CATEGORY be domain int(1..nb_categories)
+
+given tasks:
+        function (total) TASK --> record {category : CATEGORY, weight : int}
+given users:
+        function (total) USER -->
+            record {category_percentages : function (total) CATEGORY --> int,
+                    forbidden_tasks : set of TASK,
+                    task_preferences : sequence of TASK}
+
+
+find assignment : function (total) TASK --> USER
+find userTasks : function (total) USER --> set of TASK
+
+$ channelling
+such that forAll (t,u) in assignment . t in userTasks(u)
+such that forAll (u,ts) in userTasks . forAll t in ts . assignment(t) = u
+
+
+$ category_percentages
+find category_counts : function (total) USER --> function (total) CATEGORY --> int(0..nb_tasks)
+such that
+    [ category_counts(u)(c) = sum t in ts . toInt(c = tasks(t)[category])
+    | (u,ts) <- userTasks
+    , c : CATEGORY
+    ]
+find category_violations : int(0..100000)
+$ add up the absolute values of (u1/c1 - u2/c2) for every u,c pair
+such that
+    category_violations =
+    sum([ |users(u1)[category_percentages](c1) * category_counts(u2)(c2) -
+           users(u2)[category_percentages](c2) * category_counts(u1)(c1)|
+        | u1 : USER
+        , c1 : CATEGORY
+        , u2 : USER
+        , c2 : CATEGORY
+        , (u1, c1) <lex (u2, c2)
+        ])
+
+$ forbidden_tasks
+such that
+    [assignment(u) != t | (u, rec) <- users, t <- rec[forbidden_tasks]]
+
+$ task_preferences
+find preference_violations : int(0..100000)
+$ count the number of places where i is not in the userTasks set, but j is
+such that
+    preference_violations =
+    sum([ toInt(!(i in userTasks(u)) /\ j in userTasks(u))
+        | u : USER
+        , i : int(1..|users(u)[task_preferences]|)
+        , j : int(1..|users(u)[task_preferences]|)
+        , i < j
+        ])
+
+
+minimising category_violations + 100 * preference_violations
+

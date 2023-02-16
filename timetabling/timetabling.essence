@@ -1,0 +1,41 @@
+given nb_activities : int
+given nb_lecturers : int
+given nb_rooms : int
+ 
+letting ACTIVITY be domain int(1..nb_activities)
+letting LECTURER be domain int(1..nb_lecturers)
+letting ROOM be domain int(1..nb_rooms)
+letting DAY be domain int(1..5)
+letting HOUR be domain int(9..16)
+ 
+find assignment : function (total) ACTIVITY --> record {lecturer : LECTURER, day : DAY, hour : HOUR, room : ROOM }
+ 
+$ two activities that happen at the same time cannot be delivered by the same lecturer
+such that
+    [ (assignment(i)[day] = assignment(j)[day] /\ assignment(i)[hour] = assignment(j)[hour]) -> assignment(i)[lecturer] != assignment(j)[lecturer]
+    | i : ACTIVITY
+    , j : int(i+1..nb_activities)
+    ]
+ 
+$ two activities that happen at the same time cannot be in the same room
+such that
+    [ (assignment(i)[day] = assignment(j)[day] /\ assignment(i)[hour] = assignment(j)[hour]) -> assignment(i)[room] != assignment(j)[room]
+    | i : ACTIVITY
+    , j : int(i+1..nb_activities)
+    ]
+ 
+given activity_allowed_times : function (total) ACTIVITY --> set of (DAY, HOUR)
+such that [ (rec[day], rec[hour]) in activity_allowed_times(a) | (a, rec) <- assignment ]
+ 
+given lecturer_allowed_times : function (total) LECTURER --> set of (DAY, HOUR)
+such that [ (rec[day], rec[hour]) in lecturer_allowed_times(rec[lecturer]) | (a, rec) <- assignment ]
+ 
+given activity_allowed_rooms : function (total) ACTIVITY --> set of ROOM
+such that [ rec[room] in activity_allowed_rooms(a) | (a, rec) <- assignment ]
+ 
+given activity_allowed_lecturers : function (total) ACTIVITY --> set of ROOM
+such that [ rec[lecturer] in activity_allowed_lecturers(a) | (a, rec) <- assignment ]
+ 
+$ make sure the given set of activities are on separate days
+given activities_on_seperate_days : set of sequence of ACTIVITY
+such that forAll seq in activities_on_seperate_days . forAll i : int(2..|seq|) . assignment(seq(i-1))[day] < assignment(seq(i))[day]
