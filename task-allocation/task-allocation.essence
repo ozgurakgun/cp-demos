@@ -1,5 +1,7 @@
 language Essence 1.3
 
+letting M be 1000000
+
 given nb_tasks: int
 given nb_users: int
 given nb_categories: int
@@ -18,21 +20,37 @@ given users:
 
 
 find assignment : function (total) TASK --> USER
-find userTasks : function (total) USER --> set of TASK
+find user_tasks : function (total) USER --> set of TASK
 
 $ channelling
-such that forAll (t,u) in assignment . t in userTasks(u)
-such that forAll (u,ts) in userTasks . forAll t in ts . assignment(t) = u
+such that forAll (t,u) in assignment . t in user_tasks(u)
+such that forAll (u,ts) in user_tasks . forAll t in ts . assignment(t) = u
 
+
+$ weights
+find user_total_weight : function (total) USER --> int(0..M)
+such that
+    [ user_total_weight(u) = sum([ tasks(t)[weight] | t <- user_tasks(u) ])
+    | u : USER
+    ]
+
+find weight_violations : int(0..M)
+such that
+    weight_violations =
+    sum([ |user_total_weight(u1) - user_total_weight(u2)|
+        | u1 : USER
+        , u2 : USER
+        , u1 < u2
+        ])
 
 $ category_percentages
 find category_counts : function (total) USER --> function (total) CATEGORY --> int(0..nb_tasks)
 such that
     [ category_counts(u)(c) = sum t in ts . toInt(c = tasks(t)[category])
-    | (u,ts) <- userTasks
+    | (u,ts) <- user_tasks
     , c : CATEGORY
     ]
-find category_violations : int(0..100000)
+find category_violations : int(0..M)
 $ add up the absolute values of (u1/c1 - u2/c2) for every u,c pair
 such that
     category_violations =
@@ -50,11 +68,11 @@ such that
     [assignment(u) != t | (u, rec) <- users, t <- rec[forbidden_tasks]]
 
 $ task_preferences
-find preference_violations : int(0..100000)
-$ count the number of places where i is not in the userTasks set, but j is
+find preference_violations : int(0..M)
+$ count the number of places where i is not in the user_tasks set, but j is
 such that
     preference_violations =
-    sum([ toInt(!(i in userTasks(u)) /\ j in userTasks(u))
+    sum([ toInt(!(i in user_tasks(u)) /\ j in user_tasks(u))
         | u : USER
         , i : int(1..|users(u)[task_preferences]|)
         , j : int(1..|users(u)[task_preferences]|)
@@ -62,5 +80,5 @@ such that
         ])
 
 
-minimising category_violations + 100 * preference_violations
+minimising 1000 * weight_violations + category_violations + 100 * preference_violations
 
