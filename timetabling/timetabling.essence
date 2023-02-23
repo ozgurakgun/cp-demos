@@ -7,6 +7,8 @@ letting LECTURER be domain int(1..nb_lecturers)
 letting ROOM be domain int(1..nb_rooms)
 letting DAY be domain int(1..5)
 letting HOUR be domain int(9..16)
+
+letting M be 100000
  
 find assignment : function (total) ACTIVITY --> record {lecturer : LECTURER, day : DAY, hour : HOUR, room : ROOM }
  
@@ -23,13 +25,37 @@ such that
     | i : ACTIVITY
     , j : int(i+1..nb_activities)
     ]
- 
+
+
+
 given activity_allowed_times : function (total) ACTIVITY --> set of (DAY, HOUR)
 such that [ (rec[day], rec[hour]) in activity_allowed_times(a) | (a, rec) <- assignment ]
- 
+
+given activity_preferred_times : function (total) ACTIVITY --> set of (DAY, HOUR)
+find activity_preferred_times_penalty : int(0..M)
+such that activity_preferred_times_penalty = sum([ toInt(!((rec[day], rec[hour]) in activity_preferred_times(a))) | (a, rec) <- assignment ])
+
+
+
 given lecturer_allowed_times : function (total) LECTURER --> set of (DAY, HOUR)
 such that [ (rec[day], rec[hour]) in lecturer_allowed_times(rec[lecturer]) | (a, rec) <- assignment ]
- 
+
+
+given lecturer_preferred_times : function (total) LECTURER --> set of (DAY, HOUR)
+find lecturer_preferred_times_penalty : int(0..M)
+such that lecturer_preferred_times_penalty = sum([ toInt(!((rec[day], rec[hour]) in lecturer_preferred_times(rec[lecturer]))) | (a, rec) <- assignment ])
+
+
+
+given room_allowed_times : function (total) ROOM --> set of (DAY, HOUR)
+such that [ (rec[day], rec[hour]) in room_allowed_times(rec[room]) | (a, rec) <- assignment ]
+
+given room_preferred_times : function (total) ROOM --> set of (DAY, HOUR)
+find room_preferred_times_penalty : int(0..M)
+such that room_preferred_times_penalty = sum([ toInt(!((rec[day], rec[hour]) in room_preferred_times(rec[room]))) | (a, rec) <- assignment ])
+
+
+
 given activity_allowed_rooms : function (total) ACTIVITY --> set of ROOM
 such that [ rec[room] in activity_allowed_rooms(a) | (a, rec) <- assignment ]
  
@@ -39,3 +65,7 @@ such that [ rec[lecturer] in activity_allowed_lecturers(a) | (a, rec) <- assignm
 $ make sure the given set of activities are on separate days
 given activities_on_seperate_days : set of sequence of ACTIVITY
 such that forAll seq in activities_on_seperate_days . forAll i : int(2..|seq|) . assignment(seq(i-1))[day] < assignment(seq(i))[day]
+
+
+
+minimising activity_preferred_times_penalty + lecturer_preferred_times_penalty + room_preferred_times_penalty
