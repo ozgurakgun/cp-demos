@@ -82,3 +82,11 @@ such that
 
 minimising 1000 * weight_violations + category_violations + 100 * preference_violations
 
+
+
+
+
+given partial_assignment : function TASK --> USER
+such that forAll (t, u) in partial_assignment . assignment(t) = u
+
+

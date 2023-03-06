@@ -49,5 +49,7 @@
                 1
             ]
         }
-    }
+    },
+    "partial_assignment": {"1": 2}
 }
+
