@@ -16,10 +16,11 @@ find assignment : function (NURSE, DAY) --> SHIFT
 $ --------------------------------------------------------------------------------
 $ nurses work 3 days per week
 such that
-    [ sum([toInt((n,d) in defined(assignment)) | d : DAY]) = 3
+    [ sum([ toInt((n,d) in defined(assignment))
+          | d : int(1+7*(w-1) .. 7*w)     $ 1..7, 8..14 etc
+          ]) = 3
     | n : NURSE
     , w : int(1..nb_weeks)
-    , d : int(1+7*(w-1) .. 7*w)     $ 1..7, 8..14 etc
     ]
 
 
