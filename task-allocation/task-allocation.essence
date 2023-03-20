@@ -14,7 +14,7 @@ given tasks:
         function (total) TASK --> record {category : CATEGORY, weight : int}
 given users:
         function (total) USER -->
-            record {category_percentages : function (total) CATEGORY --> int,
+            record {category_percentages : function CATEGORY --> int,
                     forbidden_tasks : set of TASK,
                     task_preferences : sequence of TASK}
 
@@ -54,12 +54,12 @@ find category_violations : int(0..M)
 $ add up the absolute values of (u1/c1 - u2/c2) for every u,c pair
 such that
     category_violations =
-    sum([ |users(u1)[category_percentages](c1) * category_counts(u2)(c2) -
-           users(u2)[category_percentages](c2) * category_counts(u1)(c1)|
+    sum([ |c1percent * category_counts(u2)(c2) -
+           c2percent * category_counts(u1)(c1)|
         | u1 : USER
-        , c1 : CATEGORY
+        , (c1, c1percent) <- users(u1)[category_percentages]
         , u2 : USER
-        , c2 : CATEGORY
+        , (c2, c2percent) <- users(u2)[category_percentages]
         , (u1, c1) <lex (u2, c2)
         ])
 
