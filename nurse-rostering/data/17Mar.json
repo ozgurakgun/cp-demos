@@ -1,0 +1,42 @@
+{
+  "nb_nurses": 4,
+  "nb_weeks": 2,
+  "nb_skills": 8,
+  "preferred_shift_type": {
+    "1": 1,
+    "2": 1,
+    "3": 1,
+    "4": 2
+  },
+  "maximum_working_days_in_a_row": {
+    "1": 2,
+    "2": 3,
+    "3": 1,
+    "4": 2
+  },
+  "nurse_skills": {
+    "1": [
+      1,
+      2
+    ],
+    "2": [
+      1,
+      3,
+      7
+    ],
+    "3": [
+      1,
+      4,
+      7
+    ],
+    "4": [
+      1,
+      2,
+      7
+    ]
+  },
+  "skills_lower_bound": {
+    "1": 0,
+    "7": 0
+  }
+}
